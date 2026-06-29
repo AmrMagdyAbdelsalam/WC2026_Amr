@@ -445,117 +445,144 @@ function applyFirebasePreds(savedPreds) {
 }
 
 // ─── LIVE SCORES ────────────────────────────────────
-// Calls Claude API which uses its real-time sports tool to get live WC scores
-// This is the only reliable way to get live scores from the browser
+// Uses worldcup26.ir — free, open-source, CORS-enabled WC2026 API
+// Falls back to openfootball if needed
 
-// Match ID → SportRadar event ID mapping (from live API data)
-const SR_EVENT_IDS = {
-  1:  'sr:sport_event:53452545', // RSA vs CAN
-  2:  'sr:sport_event:53452557', // BRA vs JPN
-  3:  'sr:sport_event:53452541', // GER vs PAR
-  4:  'sr:sport_event:53452547', // NED vs MAR
-  5:  'sr:sport_event:53452561', // CIV vs NOR
-  6:  'sr:sport_event:53452543', // FRA vs SWE
-  7:  'sr:sport_event:53452563', // MEX vs ECU
-  8:  'sr:sport_event:53452565', // ENG vs COD
-  9:  'sr:sport_event:53452555', // BEL vs SEN
-  10: 'sr:sport_event:53452553', // USA vs BIH
-  11: 'sr:sport_event:53452551', // ESP vs AUT
-  12: 'sr:sport_event:53452549', // POR vs CRO
-  13: 'sr:sport_event:53452559', // SUI vs DZA
-  14: 'sr:sport_event:53452567', // AUS vs EGY
-  15: 'sr:sport_event:53452569', // ARG vs CPV
-  16: 'sr:sport_event:53452571', // COL vs GHA
+// Map our match IDs to team abbreviation pairs for matching API response
+const MATCH_MAP = {
+  1:  {h:'RSA', a:'CAN', hName:'South Africa',  aName:'Canada'},
+  2:  {h:'BRA', a:'JPN', hName:'Brazil',         aName:'Japan'},
+  3:  {h:'GER', a:'PAR', hName:'Germany',        aName:'Paraguay'},
+  4:  {h:'NED', a:'MAR', hName:'Netherlands',    aName:'Morocco'},
+  5:  {h:'CIV', a:'NOR', hName:'Ivory Coast',    aName:'Norway'},
+  6:  {h:'FRA', a:'SWE', hName:'France',         aName:'Sweden'},
+  7:  {h:'MEX', a:'ECU', hName:'Mexico',         aName:'Ecuador'},
+  8:  {h:'ENG', a:'COD', hName:'England',        aName:'DR Congo'},
+  9:  {h:'BEL', a:'SEN', hName:'Belgium',        aName:'Senegal'},
+  10: {h:'USA', a:'BIH', hName:'USA',            aName:'Bosnia & Herz.'},
+  11: {h:'ESP', a:'AUT', hName:'Spain',          aName:'Austria'},
+  12: {h:'POR', a:'CRO', hName:'Portugal',       aName:'Croatia'},
+  13: {h:'SUI', a:'DZA', hName:'Switzerland',    aName:'Algeria'},
+  14: {h:'AUS', a:'EGY', hName:'Australia',      aName:'Egypt'},
+  15: {h:'ARG', a:'CPV', hName:'Argentina',      aName:'Cape Verde'},
+  16: {h:'COL', a:'GHA', hName:'Colombia',       aName:'Ghana'},
 };
 
+function normStr(s) {
+  return (s || '').toLowerCase().replace(/[^a-z]/g, '');
+}
+
 async function fetchScores() {
+  // Try worldcup26.ir first — CORS-open, real-time WC2026 data
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2000,
-        system: `You are a sports data assistant with access to real-time FIFA World Cup 2026 scores via your sports tool.
+    const res = await fetch('https://worldcup26.ir/get/games', {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const games = await res.json();
+    if (!Array.isArray(games)) throw new Error('Bad response format');
 
-IMPORTANT: You MUST use your fetch_sports_data tool to get the current scores. Do NOT guess or use training data.
-
-After getting the data, return ONLY a raw JSON object (no markdown, no explanation):
-{"matches":[{"id":1,"homeScore":0,"awayScore":1,"status":"final","winner":"CAN","homeTeam":"South Africa","awayTeam":"Canada"}]}
-
-Rules:
-- status: "scheduled" (not started) | "in_progress" (live) | "final" (finished)  
-- winner: home team abbr if home won, away team abbr if away won, null if draw at 90min or not finished
-- homeScore/awayScore: goals scored at 90 minutes (not including ET or penalties)
-- For in_progress matches include current live score
-
-Match IDs and teams:
-1=RSA(South Africa) vs CAN(Canada)
-2=BRA(Brazil) vs JPN(Japan)  
-3=GER(Germany) vs PAR(Paraguay)
-4=NED(Netherlands) vs MAR(Morocco)
-5=CIV(Ivory Coast) vs NOR(Norway)
-6=FRA(France) vs SWE(Sweden)
-7=MEX(Mexico) vs ECU(Ecuador)
-8=ENG(England) vs COD(DR Congo)
-9=BEL(Belgium) vs SEN(Senegal)
-10=USA vs BIH(Bosnia & Herz.)
-11=ESP(Spain) vs AUT(Austria)
-12=POR(Portugal) vs CRO(Croatia)
-13=SUI(Switzerland) vs DZA(Algeria)
-14=AUS(Australia) vs EGY(Egypt)
-15=ARG(Argentina) vs CPV(Cape Verde)
-16=COL(Colombia) vs GHA(Ghana)`,
-        messages: [{
-          role: 'user',
-          content: 'Use your sports tool to get all 16 WC 2026 Round of 32 match scores right now. Return JSON only.'
-        }]
-      })
+    // Build lookup by normalized team name pair
+    const lookup = {};
+    games.forEach(g => {
+      if (!g.homeTeam || !g.awayTeam) return;
+      const hName = g.homeTeam.name || g.homeTeam;
+      const aName = g.awayTeam.name || g.awayTeam;
+      const key = normStr(hName) + '_' + normStr(aName);
+      lookup[key] = g;
     });
 
-    const data = await res.json();
-    
-    // Extract text from response (may include tool use blocks)
-    const txt = (data.content || [])
-      .filter(c => c.type === 'text')
-      .map(c => c.text || '')
-      .join('')
-      .replace(/```json|```/g, '')
-      .trim();
+    // Map to our match IDs
+    let matched = 0;
+    Object.entries(MATCH_MAP).forEach(([id, m]) => {
+      const mid = parseInt(id);
+      // Try by team name
+      const key = normStr(m.hName) + '_' + normStr(m.aName);
+      const g = lookup[key];
+      if (!g) return;
+      matched++;
 
-    if (txt && txt.includes('"matches"')) {
-      // Find JSON object in response
-      const jsonMatch = txt.match(/\{[\s\S]*"matches"[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.matches && parsed.matches.length > 0) {
-          parsed.matches.forEach(m => {
-            if (m.id && m.status) {
-              liveScores[m.id] = {
-                id: m.id,
-                homeScore: m.homeScore != null ? m.homeScore : null,
-                awayScore: m.awayScore != null ? m.awayScore : null,
-                status: m.status,
-                winner: m.winner || null
-              };
-            }
-          });
-          setSync('ok', '✓ Scores updated');
+      // Parse score
+      const hs = g.homeScore != null ? parseInt(g.homeScore) : (g.score ? parseInt(g.score.split('-')[0]) : null);
+      const as = g.awayScore != null ? parseInt(g.awayScore) : (g.score ? parseInt(g.score.split('-')[1]) : null);
+
+      // Parse status
+      let status = 'scheduled';
+      const st = (g.status || g.matchStatus || '').toLowerCase();
+      if (st.includes('finish') || st.includes('final') || st.includes('ft') || st.includes('ended') || st === 'completed') {
+        status = 'final';
+      } else if (st.includes('live') || st.includes('progress') || st.includes('1h') || st.includes('2h') || st.includes('ht') || st.includes('ongoing')) {
+        status = 'in_progress';
+      }
+
+      // Determine winner
+      let winner = null;
+      if (status === 'final' && hs != null && as != null) {
+        if (hs > as) winner = m.h;
+        else if (as > hs) winner = m.a;
+        // draw at 90min = went to ET/PEN, winner determined separately
+      }
+
+      liveScores[mid] = { id: mid, homeScore: hs, awayScore: as, status, winner };
+    });
+
+    if (matched > 0) {
+      setSync('ok', '✓ Live scores updated');
+      return;
+    }
+    throw new Error('No matches matched');
+
+  } catch(e1) {
+    console.log('worldcup26.ir failed:', e1.message, '— trying openfootball...');
+
+    // Fallback: openfootball GitHub JSON
+    try {
+      const res2 = await fetch(
+        'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json?t=' + Date.now(),
+        { cache: 'no-store' }
+      );
+      if (!res2.ok) throw new Error('HTTP ' + res2.status);
+      const data = await res2.json();
+      const matches = data.matches || [];
+
+      const lookup2 = {};
+      matches.forEach(m => {
+        const key = normStr(m.team1) + '_' + normStr(m.team2);
+        lookup2[key] = m;
+      });
+
+      Object.entries(MATCH_MAP).forEach(([id, m]) => {
+        const mid = parseInt(id);
+        const key = normStr(m.hName) + '_' + normStr(m.aName);
+        const match = lookup2[key];
+        if (!match) return;
+
+        if (!match.score || !match.score.ft) {
+          const ourMatch = MATCHES.find(x => x.id === mid);
+          const kicked = ourMatch && Date.now() >= ourMatch.ko;
+          liveScores[mid] = { id: mid, homeScore: null, awayScore: null, status: kicked ? 'in_progress' : 'scheduled', winner: null };
           return;
         }
-      }
-    }
-    throw new Error('No valid score data returned');
 
-  } catch(e) {
-    // Fallback: use hardcoded confirmed results only
-    console.log('Score fetch failed, using hardcoded results:', e.message);
-    applyHardcodedResults();
-    setSync('ok', '✓ Connected');
+        const hs = match.score.ft[0], as = match.score.ft[1];
+        let winner = null;
+        if (hs > as) winner = m.h;
+        else if (as > hs) winner = m.a;
+        liveScores[mid] = { id: mid, homeScore: hs, awayScore: as, status: 'final', winner };
+      });
+
+      setSync('ok', '✓ Scores updated');
+
+    } catch(e2) {
+      console.log('Both APIs failed:', e2.message);
+      applyHardcodedResults();
+      setSync('ok', '✓ Connected (offline scores)');
+    }
   }
 }
 
-// Hardcoded confirmed results — updated after each finished match
+// Hardcoded confirmed results — last resort fallback
 function applyHardcodedResults() {
   const confirmed = [
     { id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN' }, // RSA 0-1 CAN
