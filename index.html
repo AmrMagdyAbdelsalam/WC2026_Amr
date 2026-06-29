@@ -677,7 +677,10 @@ function renderAll() {
     const lv   = liveScores[m.id];
     const isLv = lv && lv.status==='in_progress';
     const isFn = lv && lv.status==='final';
-    const off  = lk ? 'off' : '';
+    const off      = lk ? 'off' : '';
+    const eHasScore = p.hs!=='' && p.as!=='';
+    const eIsDraw   = eHasScore && p.hs===p.as;
+    const eIsWin    = eHasScore && !eIsDraw;
     const hasSaved = p.q && p.e; // has a complete prediction saved
 
     const lkbadge = lk
@@ -725,13 +728,13 @@ function renderAll() {
         <div class="qbtn ${p.q===m.away?'on':''} ${off}" data-v="${m.away}"
           onclick="sp(${m.id},'q',this.dataset.v)">${m.away}</div>
       </div>
-      <div class="sl">Ending method <span style="font-size:10px;color:#aaa;font-weight:400">(90 min score only)</span></div>
+      <div class="sl">Ending method <span style="font-size:10px;color:#aaa;font-weight:400">(based on 90 min score)</span></div>
       <div class="erow" id="e-${m.id}">
-        <div class="ebtn ${p.e==='90'?'on':''} ${off}" data-v="90"
+        <div class="ebtn ${p.e==='90'?'on':''} ${off||eHasScore&&eIsDraw?'off':''}" data-v="90"
           onclick="sp(${m.id},'e',this.dataset.v)">90 mins</div>
-        <div class="ebtn ${p.e==='ET'?'on':''} ${off}" data-v="ET"
+        <div class="ebtn ${p.e==='ET'?'on':''} ${off||eHasScore&&eIsWin?'off':''}" data-v="ET"
           onclick="sp(${m.id},'e',this.dataset.v)">Extra time</div>
-        <div class="ebtn ${p.e==='PEN'?'on':''} ${off}" data-v="PEN"
+        <div class="ebtn ${p.e==='PEN'?'on':''} ${off||eHasScore&&eIsWin?'off':''}" data-v="PEN"
           onclick="sp(${m.id},'e',this.dataset.v)">Penalties</div>
       </div>
       <div class="drawwarn" id="dw-${m.id}">⚠️ Draw predicted — pick Extra Time or Penalties, and still choose who qualifies.</div>
@@ -745,16 +748,23 @@ function renderAll() {
 
 function fixEndingButtons(id) {
   const p = preds[id];
+  const lk = isLocked(MATCHES.find(m=>m.id===id));
+  if (lk) return; // locked matches handled separately
   const hasScore = p.hs!=='' && p.as!=='';
   const isDraw   = hasScore && p.hs===p.as;
   const isWin    = hasScore && !isDraw;
   document.querySelectorAll(`#e-${id} .ebtn`).forEach(b => {
     const v = b.dataset.v;
-    if (isDraw && v==='90')                   { b.classList.add('off'); b.classList.remove('on'); }
-    else if (isWin && (v==='ET'||v==='PEN'))  { b.classList.add('off'); b.classList.remove('on'); }
-    else if (!b.classList.contains('off') || (!isDraw && !isWin)) { 
-      // only remove off if not locked
-      if (!isLocked(MATCHES.find(m=>m.id===id))) b.classList.remove('off');
+    const shouldDisable =
+      (isDraw && v==='90') ||
+      (isWin  && (v==='ET' || v==='PEN'));
+    if (shouldDisable) {
+      b.classList.add('off');
+      b.classList.remove('on');
+    } else {
+      b.classList.remove('off');
+      // restore 'on' state
+      b.classList.toggle('on', v===p.e);
     }
   });
 }
