@@ -295,6 +295,19 @@ function fbLoad(name) {
 db.ref('predictions').on('value', snap => {
   allData = snap.val() || {};
   setSync('ok', '✓ Connected — real-time sync active');
+
+  // If a player is already selected, reload their predictions from fresh data
+  const currentName = document.getElementById('pname').value;
+  if (currentName && allData[currentName]) {
+    const d = allData[currentName];
+    if (d && d.preds) {
+      MATCHES.forEach(m => {
+        if (d.preds[m.id]) preds[m.id] = Object.assign({hs:'',as:'',q:'',e:'90'}, d.preds[m.id]);
+      });
+      renderAll();
+    }
+  }
+
   if (document.getElementById('page-leaderboard').classList.contains('active')) {
     renderLBFromCache();
   }
@@ -374,6 +387,7 @@ function showTab(t) {
 // ═══════════════════════════════════════════
 async function onNameChange() {
   const name = document.getElementById('pname').value; if(!name) return;
+  localStorage.setItem('wc26_name', name);
   MATCHES.forEach(m => { preds[m.id]={hs:'',as:'',q:'',e:'90'}; });
   // Load from live cache first, fallback to direct fetch
   const d = allData[name] || await fbLoad(name).catch(()=>null);
@@ -692,7 +706,27 @@ async function saveAdmin(){
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
+// Save name to localStorage on change, restore on load
+const savedName = localStorage.getItem('wc26_name');
+if (savedName) {
+  const sel = document.getElementById('pname');
+  sel.value = savedName;
+}
+
 fetchScores().then(renderAll);
+
+// After Firebase data loads, auto-restore saved player's predictions
+db.ref('predictions').once('value').then(snap => {
+  allData = snap.val() || {};
+  const name = document.getElementById('pname').value;
+  if (name && allData[name] && allData[name].preds) {
+    MATCHES.forEach(m => {
+      if (allData[name].preds[m.id])
+        preds[m.id] = Object.assign({hs:'',as:'',q:'',e:'90'}, allData[name].preds[m.id]);
+    });
+    renderAll();
+  }
+});
 setInterval(async()=>{
   await fetchScores(); renderAll();
   if(document.getElementById('page-leaderboard').classList.contains('active')) renderLBFromCache();
