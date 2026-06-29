@@ -17,7 +17,9 @@
   OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
       appId: "bce00dce-d313-4189-a667-ff708f7e7019",
-      notifyButton: { enable: false }, // we use our own UI
+      notifyButton: { enable: false },
+      serviceWorkerParam: { scope: "/WC2026_Amr/" },
+      serviceWorkerPath: "/WC2026_Amr/OneSignalSDKWorker.js",
       promptOptions: {
         slidedown: {
           prompts: [{
@@ -532,7 +534,7 @@ async function fetchScores() {
       let winner = null;
       if (hs > as) winner = TEAM_ABBR[home] || null;
       else if (as > hs) winner = TEAM_ABBR[away] || null;
-      // If draw at 90min in knockout — winner is whoever qualified (can't determine from score alone)
+      // If draw at 90min in knockout — winner is whoever qualified (cannot determine from score alone)
       // For now mark as draw (penalties/ET), points calc handles ET/PEN correctly
 
       liveScores[mid] = { id: mid, homeScore: hs, awayScore: as, status: 'final', winner };
@@ -782,11 +784,11 @@ function renderAll() {
       </div>
       <div class="sl">Ending method <span style="font-size:10px;color:#aaa;font-weight:400">(based on 90 min score)</span></div>
       <div class="erow" id="e-${m.id}">
-        <div class="ebtn ${p.e==='90'?'on':''} ${off||eHasScore&&eIsDraw?'off':''}" data-v="90"
+        <div class="ebtn ${p.e==='90'?'on':''} ${lk?'off':eHasScore&&eIsDraw?'off':''}" data-v="90"
           onclick="sp(${m.id},'e',this.dataset.v)">90 mins</div>
-        <div class="ebtn ${p.e==='ET'?'on':''} ${off||eHasScore&&eIsWin?'off':''}" data-v="ET"
+        <div class="ebtn ${p.e==='ET'?'on':''} ${lk?'off':eHasScore&&eIsWin?'off':''}" data-v="ET"
           onclick="sp(${m.id},'e',this.dataset.v)">Extra time</div>
-        <div class="ebtn ${p.e==='PEN'?'on':''} ${off||eHasScore&&eIsWin?'off':''}" data-v="PEN"
+        <div class="ebtn ${p.e==='PEN'?'on':''} ${lk?'off':eHasScore&&eIsWin?'off':''}" data-v="PEN"
           onclick="sp(${m.id},'e',this.dataset.v)">Penalties</div>
       </div>
       <div class="drawwarn" id="dw-${m.id}">⚠️ Draw predicted — pick Extra Time or Penalties, and still choose who qualifies.</div>
@@ -1242,13 +1244,13 @@ async function toggleNotifications() {
       updateNotifBtn(granted);
       if (granted) {
         scheduleMatchReminders();
-        showToast('🔔 Notifications enabled! You'll get a reminder 1 hour before each match.');
+        showToast("🔔 Notifications enabled! You'll get a reminder 1 hour before each match.");
       } else {
         showToast('Notifications blocked. Enable them in iPhone Settings → Safari → Notifications.');
       }
     } else {
-      // Explain how to turn off (can't programmatically disable)
-      showToast('To disable: iPhone Settings → Notifications → Safari → turn off.');
+      // Explain how to turn off (cannot programmatically disable)
+      showToast("To disable: iPhone Settings → Notifications → Safari → turn off.");
     }
   });
 }
