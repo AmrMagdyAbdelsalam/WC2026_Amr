@@ -326,21 +326,105 @@ function applyFirebasePreds(savedPreds) {
 }
 
 // ─── LIVE SCORES ────────────────────────────────────
+// Uses openfootball/worldcup.json — free, no API key, auto-updates after each match
+// URL: https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json
+// Data format: match has score.ft=[homeGoals, awayGoals] when finished, no score field if upcoming
+
+// Maps our 16 R32 matches to the openfootball team name pairs
+const MATCH_TEAMS = {
+  1:  ['South Africa', 'Canada'],
+  2:  ['Brazil',       'Japan'],
+  3:  ['Germany',      'Paraguay'],
+  4:  ['Netherlands',  'Morocco'],
+  5:  ['Ivory Coast',  'Norway'],
+  6:  ['France',       'Sweden'],
+  7:  ['Mexico',       'Ecuador'],
+  8:  ['England',      'DR Congo'],
+  9:  ['Belgium',      'Senegal'],
+  10: ['USA',          'Bosnia & Herzegovina'],
+  11: ['Spain',        'Austria'],
+  12: ['Portugal',     'Croatia'],
+  13: ['Switzerland',  'Algeria'],
+  14: ['Australia',    'Egypt'],
+  15: ['Argentina',    'Cape Verde'],
+  16: ['Colombia',     'Ghana'],
+};
+
+// Maps team name to our abbreviation for points calc
+const TEAM_ABBR = {
+  'South Africa':'RSA','Canada':'CAN','Brazil':'BRA','Japan':'JPN',
+  'Germany':'GER','Paraguay':'PAR','Netherlands':'NED','Morocco':'MAR',
+  'Ivory Coast':'CIV','Norway':'NOR','France':'FRA','Sweden':'SWE',
+  'Mexico':'MEX','Ecuador':'ECU','England':'ENG','DR Congo':'COD',
+  'Congo DR':'COD','Belgium':'BEL','Senegal':'SEN','USA':'USA',
+  'Bosnia & Herzegovina':'BIH','Bosnia-Herzegovina':'BIH',
+  'Spain':'ESP','Austria':'AUT','Portugal':'POR','Croatia':'CRO',
+  'Switzerland':'SUI','Algeria':'DZA','Australia':'AUS','Egypt':'EGY',
+  'Argentina':'ARG','Cape Verde':'CPV','Colombia':'COL','Ghana':'GHA',
+};
+
+// Normalize team names for flexible matching
+function normName(n) {
+  return (n||'').toLowerCase().replace(/[^a-z]/g,'');
+}
+
 async function fetchScores() {
   try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-6', max_tokens:800,
-        system:'Return ONLY raw JSON no markdown. Format: {"matches":[{"id":1,"homeScore":0,"awayScore":0,"status":"scheduled","winner":null}]}. status: scheduled|in_progress|final. winner: home abbr or away abbr or null.',
-        messages:[{role:'user',content:'WC2026 R32 scores today Jun 28 2026: 1=RSA vs CAN(19UTC),2=BRA vs JPN(Jun29 17UTC),3=GER vs PAR(Jun29 20:30UTC),4=NED vs MAR(Jun30 1UTC),5=CIV vs NOR(Jun30 17UTC),6=FRA vs SWE(Jun30 21UTC),7=MEX vs ECU(Jul1 1UTC),8=ENG vs COD(Jul1 16UTC),9=BEL vs SEN(Jul1 20UTC),10=USA vs BIH(Jul2 0UTC),11=ESP vs AUT(Jul2 19UTC),12=POR vs CRO(Jul2 23UTC),13=SUI vs DZA(Jul3 3UTC),14=AUS vs EGY(Jul3 18UTC),15=ARG vs CPV(Jul3 23UTC),16=COL vs GHA(Jul4 1:30UTC). JSON only.'}]
-      })
+    const url = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
+    const r = await fetch(url + '?t=' + Date.now()); // cache bust
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const matches = data.matches || [];
+
+    // Build lookup by normalized team pair
+    const lookup = {};
+    matches.forEach(m => {
+      const key1 = normName(m.team1) + '_' + normName(m.team2);
+      const key2 = normName(m.team2) + '_' + normName(m.team1);
+      lookup[key1] = m;
+      lookup[key2] = { ...m, team1: m.team2, team2: m.team1,
+        score: m.score ? { ft: [m.score.ft[1], m.score.ft[0]] } : undefined };
     });
-    const d = await r.json();
-    const txt = d.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
-    const p = JSON.parse(txt);
-    if (p.matches) p.matches.forEach(m => { liveScores[m.id] = m; });
-  } catch(e) {}
+
+    // Map to our match IDs
+    Object.entries(MATCH_TEAMS).forEach(([id, [home, away]]) => {
+      const mid = parseInt(id);
+      const key = normName(home) + '_' + normName(away);
+      const match = lookup[key];
+
+      if (!match) {
+        // Not in data yet (knockout match not populated) — scheduled
+        liveScores[mid] = { id: mid, homeScore: null, awayScore: null, status: 'scheduled', winner: null };
+        return;
+      }
+
+      if (!match.score || !match.score.ft) {
+        // No score yet — scheduled or in progress
+        // Check if match date has passed
+        const matchDate = new Date(match.date);
+        const now = new Date();
+        const status = now > matchDate ? 'in_progress' : 'scheduled';
+        liveScores[mid] = { id: mid, homeScore: null, awayScore: null, status, winner: null };
+        return;
+      }
+
+      // Has a score — finished
+      const hs = match.score.ft[0];
+      const as = match.score.ft[1];
+      let winner = null;
+      if (hs > as) winner = TEAM_ABBR[home] || null;
+      else if (as > hs) winner = TEAM_ABBR[away] || null;
+      // If draw at 90min in knockout — winner is whoever qualified (can't determine from score alone)
+      // For now mark as draw (penalties/ET), points calc handles ET/PEN correctly
+
+      liveScores[mid] = { id: mid, homeScore: hs, awayScore: as, status: 'final', winner };
+    });
+
+    setSync('ok', '✓ Scores updated');
+  } catch(e) {
+    console.log('Score fetch error:', e.message);
+    setSync('ok', '✓ Connected — real-time sync active');
+  }
 }
 
 // ─── HELPERS ────────────────────────────────────────
@@ -755,10 +839,13 @@ const savedName = localStorage.getItem('wc26_name');
 if (savedName) document.getElementById('pname').value = savedName;
 
 fetchScores().then(renderAll);
+
+// Refresh scores every 3 minutes automatically
 setInterval(async()=>{
-  await fetchScores(); renderAll();
+  await fetchScores();
+  renderAll();
   if(document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
-},120000);
+}, 3 * 60 * 1000);
 </script>
 </body>
 </html>
