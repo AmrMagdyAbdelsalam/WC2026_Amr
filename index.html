@@ -10,6 +10,26 @@
 <meta name="theme-color" content="#ffffff"/>
 <title>⚽ WC 2026 Predictions</title>
 
+<!-- OneSignal Push Notifications -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "bce00dce-d313-4189-a667-ff708f7e7019",
+      notifyButton: { enable: false }, // we use our own UI
+      promptOptions: {
+        slidedown: {
+          prompts: [{
+            type: "push",
+            autoPrompt: false,
+          }]
+        }
+      }
+    });
+  });
+</script>
+
 <!-- App icon shown on iPhone home screen -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231a1a1a'/%3E%3Ctext x='90' y='120' font-size='90' text-anchor='middle'%3E⚽%3C/text%3E%3C/svg%3E"/>
 <style>
@@ -177,6 +197,13 @@ table.apt tr:last-child td{border:none}
 </style>
 </head>
 <body>
+<!-- Banner shown only when opened in browser, not home screen app -->
+<div id="install-banner" style="display:none;background:#1a1a1a;color:#fff;padding:10px 16px;font-size:12px;line-height:1.5;position:sticky;top:0;z-index:200;text-align:center">
+  📲 <b>Add to Home Screen</b> for the best experience — tap Share ⬆ → "Add to Home Screen"
+  <button onclick="document.getElementById('install-banner').style.display='none'"
+    style="margin-left:10px;background:none;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px">✕</button>
+</div>
+
 <div class="wrap">
 
   <div class="topbar">
@@ -185,7 +212,10 @@ table.apt tr:last-child td{border:none}
         <h1>⚽ WC 2026 — Round of 32</h1>
         <p>Knockout stage predictions · Jun 28 – Jul 4</p>
       </div>
-      <button onclick="refreshApp()" id="refresh-btn" style="background:none;border:1px solid #e0ddd6;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;color:#555;flex-shrink:0;margin-left:8px;margin-top:2px" title="Refresh">↻</button>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:8px;margin-top:2px">
+        <button onclick="toggleNotifications()" id="notif-btn" style="background:none;border:1px solid #e0ddd6;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;color:#555" title="Match reminders">🔕</button>
+        <button onclick="refreshApp()" id="refresh-btn" style="background:none;border:1px solid #e0ddd6;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;color:#555" title="Refresh">↻</button>
+      </div>
     </div>
     <div class="sync">
       <div class="dot yellow" id="dot"></div>
@@ -382,13 +412,22 @@ async function fbSaveMatch(name, matchId, matchPred) {
 db.ref('predictions').on('value', snap => {
   allData = snap.val() || {};
   firebaseReady = true;
-  setSync('ok', '✓ Connected — real-time sync active');
+  setSync('ok', '✓ Connected');
   if (currentPlayer && allData[currentPlayer] && allData[currentPlayer].preds) {
     applyFirebasePreds(allData[currentPlayer].preds);
     renderAll();
   }
   if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
+  if (document.getElementById('page-allpicks').classList.contains('active')) renderAllPicks();
+}, error => {
+  setSync('red', 'Connection failed — check internet');
+  console.error('Firebase error:', error);
 });
+
+// Timeout: if not connected in 8 seconds, show error
+setTimeout(() => {
+  if (!firebaseReady) setSync('red', 'Connection slow — check internet');
+}, 8000);
 
 function applyFirebasePreds(savedPreds) {
   MATCHES.forEach(m => {
@@ -1168,6 +1207,98 @@ function showAdminMatchAlert(id,msg,type){
   clearTimeout(el._t); el._t=setTimeout(()=>{el.className='matchalert';},4000);
 }
 
+// ─── NOTIFICATIONS ──────────────────────────────────
+async function initNotifications() {
+  if (!window.OneSignalDeferred) return;
+  OneSignalDeferred.push(async function(OneSignal) {
+    const permission = await OneSignal.Notifications.permission;
+    updateNotifBtn(permission);
+
+    // Schedule 1-hour reminders for all upcoming matches
+    if (permission) scheduleMatchReminders();
+  });
+}
+
+function updateNotifBtn(enabled) {
+  const btn = document.getElementById('notif-btn');
+  if (!btn) return;
+  btn.textContent = enabled ? '🔔' : '🔕';
+  btn.title = enabled ? 'Notifications ON' : 'Tap to enable match reminders';
+  btn.style.background = enabled ? '#dcfce7' : 'none';
+  btn.style.borderColor = enabled ? '#86efac' : '#e0ddd6';
+}
+
+async function toggleNotifications() {
+  if (!window.OneSignalDeferred) {
+    alert('Notifications not available. Make sure you added the app to your home screen.');
+    return;
+  }
+  OneSignalDeferred.push(async function(OneSignal) {
+    const current = await OneSignal.Notifications.permission;
+    if (!current) {
+      // Request permission
+      await OneSignal.Notifications.requestPermission();
+      const granted = await OneSignal.Notifications.permission;
+      updateNotifBtn(granted);
+      if (granted) {
+        scheduleMatchReminders();
+        showToast('🔔 Notifications enabled! You'll get a reminder 1 hour before each match.');
+      } else {
+        showToast('Notifications blocked. Enable them in iPhone Settings → Safari → Notifications.');
+      }
+    } else {
+      // Explain how to turn off (can't programmatically disable)
+      showToast('To disable: iPhone Settings → Notifications → Safari → turn off.');
+    }
+  });
+}
+
+function scheduleMatchReminders() {
+  // OneSignal handles delivery — we just tag the user with upcoming matches
+  // so OneSignal can send them scheduled notifications
+  OneSignalDeferred.push(async function(OneSignal) {
+    const now = Date.now();
+    const upcoming = MATCHES.filter(m => m.ko - 3600000 > now); // 1 hour before ko
+    // Tag user with next match time so server can trigger
+    // For client-side scheduling, we use local notifications via the Notifications API
+    upcoming.forEach(m => {
+      const notifTime = m.ko - 3600000; // 1 hour before
+      const delay = notifTime - now;
+      if (delay > 0 && delay < 7 * 24 * 3600000) { // only schedule within 7 days
+        setTimeout(() => {
+          sendLocalNotif(m);
+        }, delay);
+      }
+    });
+  });
+}
+
+function sendLocalNotif(m) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  new Notification('⚽ Match in 1 hour!', {
+    body: `${m.home} vs ${m.away} — starting at ${koLabel(m)}`,
+    icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Ctext y=".9em" font-size="64"%3E⚽%3C/text%3E%3C/svg%3E',
+    badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Ctext y=".9em" font-size="64"%3E⚽%3C/text%3E%3C/svg%3E',
+    tag: 'wc2026-match-' + m.id,
+    requireInteraction: true,
+  });
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;max-width:320px;text-align:center;line-height:1.4;box-shadow:0 4px 20px rgba(0,0,0,.3)';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.style.opacity = '0', 4000);
+}
+
 // ─── REFRESH ────────────────────────────────────────
 async function refreshApp() {
   const btn = document.getElementById('refresh-btn');
@@ -1202,6 +1333,14 @@ if (savedName) {
 }
 
 fetchScores().then(renderAll);
+initNotifications();
+
+// Show "Add to Home Screen" banner if opened in browser
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+if (!isStandalone) {
+  document.getElementById('install-banner').style.display = 'block';
+}
 
 // Refresh scores every 3 minutes automatically
 setInterval(async()=>{
