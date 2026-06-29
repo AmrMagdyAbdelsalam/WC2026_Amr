@@ -510,25 +510,40 @@ function isDraw(id) {
 }
 
 // Points — only from FINISHED matches
+// RULES:
+// - homeScore/awayScore are always the 90-min score
+// - If score is a draw at 90min → match went to ET or PEN → ending must be ET or PEN
+// - If score is NOT a draw at 90min → match ended in 90min → ending must be 90
+// - A prediction of ET or PEN with a non-draw score is INVALID (impossible)
 function calcEarnedPts(pred, live, m) {
   if (!pred || !live || live.status !== 'final') return {pts:0, qOk:false, sOk:false, eOk:false};
   let pts=0, qOk=false, sOk=false, eOk=false;
+
+  const hs = live.homeScore;
+  const as = live.awayScore;
+  const isDraw90 = hs === as; // draw at 90min means ET or PEN happened
+
   // Qualifier: 2pts
   if (live.winner && pred.q) {
     if ((pred.q===m.home&&live.winner===m.hA)||(pred.q===m.away&&live.winner===m.aA))
       { qOk=true; pts+=2; }
   }
-  // Correct score: 3pts
-  if (live.homeScore!=null && live.awayScore!=null && pred.hs!=='' && pred.as!=='') {
-    if (parseInt(pred.hs)===live.homeScore && parseInt(pred.as)===live.awayScore)
+
+  // Correct score (90min): 3pts
+  // Score prediction is always vs the 90min score
+  if (hs!=null && as!=null && pred.hs!=='' && pred.as!=='') {
+    if (parseInt(pred.hs)===hs && parseInt(pred.as)===as)
       { sOk=true; pts+=3; }
   }
-  // Ending: 1pt
+
+  // Ending method: 1pt
+  // If 90min score is a draw → must have been ET or PEN → pred.e must be ET or PEN
+  // If 90min score is NOT a draw → ended at 90min → pred.e must be 90
   if (pred.e) {
-    const dr = live.homeScore===live.awayScore;
-    if (dr){if(pred.e==='ET'||pred.e==='PEN'){eOk=true;pts+=1;}}
-    else   {if(pred.e==='90'){eOk=true;pts+=1;}}
+    if (isDraw90 && (pred.e==='ET' || pred.e==='PEN')) { eOk=true; pts+=1; }
+    else if (!isDraw90 && pred.e==='90')               { eOk=true; pts+=1; }
   }
+
   return {pts, qOk, sOk, eOk};
 }
 
@@ -710,7 +725,7 @@ function renderAll() {
         <div class="qbtn ${p.q===m.away?'on':''} ${off}" data-v="${m.away}"
           onclick="sp(${m.id},'q',this.dataset.v)">${m.away}</div>
       </div>
-      <div class="sl">Ending method</div>
+      <div class="sl">Ending method <span style="font-size:10px;color:#aaa;font-weight:400">(90 min score only)</span></div>
       <div class="erow" id="e-${m.id}">
         <div class="ebtn ${p.e==='90'?'on':''} ${off}" data-v="90"
           onclick="sp(${m.id},'e',this.dataset.v)">90 mins</div>
@@ -725,20 +740,57 @@ function renderAll() {
     </div>`;
   });
   document.getElementById('matchlist').innerHTML = html;
+  MATCHES.forEach(m => fixEndingButtons(m.id));
 }
+
+function fixEndingButtons(id) {
+  const p = preds[id];
+  const hasScore = p.hs!=='' && p.as!=='';
+  const isDraw   = hasScore && p.hs===p.as;
+  const isWin    = hasScore && !isDraw;
+  document.querySelectorAll(`#e-${id} .ebtn`).forEach(b => {
+    const v = b.dataset.v;
+    if (isDraw && v==='90')                   { b.classList.add('off'); b.classList.remove('on'); }
+    else if (isWin && (v==='ET'||v==='PEN'))  { b.classList.add('off'); b.classList.remove('on'); }
+    else if (!b.classList.contains('off') || (!isDraw && !isWin)) { 
+      // only remove off if not locked
+      if (!isLocked(MATCHES.find(m=>m.id===id))) b.classList.remove('off');
+    }
+  });
+}
+
 
 function sp(id, field, val) {
   if (isLocked(MATCHES.find(m=>m.id===id))) return;
   preds[id][field] = val;
   const p = preds[id];
-  const draw = p.hs!=='' && p.as!=='' && p.hs===p.as;
-  const dw = document.getElementById('dw-'+id); if(dw) dw.style.display=draw?'block':'none';
-  if (draw && p.e==='90') { p.e=''; }
+  const hasScore = p.hs!=='' && p.as!=='';
+  const isDraw   = hasScore && p.hs===p.as;
+  const isWin    = hasScore && !isDraw;
+
+  // Auto-correct ending based on score
+  if (isWin && (p.e==='ET' || p.e==='PEN')) preds[id].e = '90';
+  if (isDraw && p.e==='90') preds[id].e = '';
+
+  // Show/hide draw warning
+  const dw = document.getElementById('dw-'+id);
+  if (dw) dw.style.display = isDraw ? 'block' : 'none';
+
+  // Update qual buttons
   document.querySelectorAll(`#q-${id} .qbtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===preds[id].q));
-  document.querySelectorAll(`#e-${id} .ebtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===preds[id].e));
-  // Mark save button as unsaved when user edits
+
+  // Update ending buttons — disable impossible options
+  document.querySelectorAll(`#e-${id} .ebtn`).forEach(b => {
+    const v = b.dataset.v;
+    if (isDraw && v==='90')                   { b.classList.add('off'); b.classList.remove('on'); }
+    else if (isWin && (v==='ET'||v==='PEN'))  { b.classList.add('off'); b.classList.remove('on'); }
+    else                                       { b.classList.remove('off'); b.classList.toggle('on', v===preds[id].e); }
+  });
+
+  // Mark save button as unsaved
   const btn = document.getElementById('msave-'+id);
   if (btn) { btn.className='msavebtn'; btn.textContent='💾 Save this prediction'; }
+  updPts(id);
 }
 
 async function saveMatch(id) {
