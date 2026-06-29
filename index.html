@@ -115,6 +115,26 @@ table.lbt tr:last-child td{border:none}
 .av{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .empty{text-align:center;padding:3rem 1rem;color:#888;font-size:14px;line-height:1.8}
 .lbnote{font-size:11px;color:#888;margin-top:8px;text-align:center;line-height:1.6;padding:0 4px}
+/* all picks */
+.ap-match{background:#fff;border:1px solid #e0ddd6;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.ap-match-hdr{padding:10px 14px;background:#f5f5f0;border-bottom:1px solid #e0ddd6;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.ap-match-title{font-size:13px;font-weight:700}
+.ap-match-score{font-size:12px;font-weight:700;color:#166534;background:#dcfce7;border-radius:20px;padding:2px 10px}
+.ap-match-score.pending{color:#888;background:#f5f5f0}
+.ap-match-score.live{color:#166534;background:#dcfce7;animation:pulse2 1.5s infinite}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.6}}
+table.apt{width:100%;border-collapse:collapse;font-size:12px}
+table.apt th{text-align:left;padding:7px 14px;font-size:10px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e0ddd6;background:#fafaf8}
+table.apt td{padding:9px 14px;border-bottom:1px solid #f0ede8;vertical-align:middle}
+table.apt tr:last-child td{border:none}
+.ap-av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-right:6px;vertical-align:middle}
+.ap-q{font-weight:700;color:#166534}
+.ap-e{color:#555}
+.ap-score{font-weight:700;font-family:monospace;font-size:13px}
+.ap-pts{font-weight:700;font-size:13px}
+.ap-pts.earned{color:#166534}
+.no-pred{color:#ccc;font-style:italic}
+.ap-dayhdr{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin:14px 0 6px}
 /* player auth */
 .auth-card{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:18px;margin-bottom:14px}
 .auth-title{font-size:15px;font-weight:700;margin-bottom:6px}
@@ -170,6 +190,7 @@ table.lbt tr:last-child td{border:none}
   <div class="tabs">
     <div class="tab active" onclick="showTab('predict')">My Predictions</div>
     <div class="tab" onclick="showTab('summary')">Summary</div>
+    <div class="tab" onclick="showTab('allpicks')">All Picks</div>
     <div class="tab" onclick="showTab('leaderboard')">Leaderboard</div>
     <div class="tab" onclick="showTab('admin')">Admin</div>
   </div>
@@ -227,6 +248,12 @@ table.lbt tr:last-child td{border:none}
       <div id="sumcontent"></div>
     </div>
     <button class="copybtn" onclick="doCopy()">📋 Copy as text to share</button>
+  </div>
+
+  <!-- ALL PICKS -->
+  <div id="page-allpicks" class="page">
+    <div style="height:12px"></div>
+    <div id="allpicks-content"><div class="empty">Loading picks…</div></div>
   </div>
 
   <!-- LEADERBOARD -->
@@ -437,11 +464,12 @@ async function fetchScores() {
       }
 
       if (!match.score || !match.score.ft) {
-        // No score yet — scheduled or in progress
-        // Check if match date has passed
-        const matchDate = new Date(match.date);
-        const now = new Date();
-        const status = now > matchDate ? 'in_progress' : 'scheduled';
+        // No score yet — determine if truly in progress or just scheduled
+        // Only mark in_progress if the kickoff time has passed (use our ko timestamps)
+        const ourMatch = MATCHES.find(mx => mx.id === mid);
+        const now = Date.now();
+        const kicked = ourMatch && now >= ourMatch.ko;
+        const status = kicked ? 'in_progress' : 'scheduled';
         liveScores[mid] = { id: mid, homeScore: null, awayScore: null, status, winner: null };
         return;
       }
@@ -508,9 +536,10 @@ function calcEarnedPts(pred, live, m) {
 function showTab(t) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach((tb,i)=>
-    tb.classList.toggle('active',['predict','summary','leaderboard','admin'][i]===t));
+    tb.classList.toggle('active',['predict','summary','allpicks','leaderboard','admin'][i]===t));
   document.getElementById('page-'+t).classList.add('active');
-  if (t==='summary') renderSummary();
+  if (t==='summary')   renderSummary();
+  if (t==='allpicks')  renderAllPicks();
   if (t==='leaderboard') renderLB();
 }
 
@@ -641,9 +670,12 @@ function renderAll() {
       : soon ? `<span class="lkbadge soon">⏰ ${u}</span>`
       : `<span class="lkbadge open">${u||'Open'}</span>`;
 
-    const livebar = isLv
+    const hasLiveScore = lv && lv.homeScore != null && lv.awayScore != null;
+    const livebar = isLv && hasLiveScore
       ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
-      : isFn ? `<div class="livebar final">✔ Final: <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>` : '';
+      : isLv && !hasLiveScore
+      ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} vs ${m.away}</b></div>`
+      : isFn && hasLiveScore ? `<div class="livebar final">✔ Final: <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>` : '';
 
     // Save button — only shown if locked=false AND user is in edit mode
     const saveBtn = (!lk && editMode) ? `
@@ -790,6 +822,96 @@ function doCopy() {
     const b=document.querySelector('.copybtn'); b.textContent='✓ Copied!';
     setTimeout(()=>b.textContent='📋 Copy as text to share',2000);
   });
+}
+
+// ─── ALL PICKS ──────────────────────────────────────
+function renderAllPicks() {
+  const el = document.getElementById('allpicks-content');
+  const eL = {'90':'90m','ET':'ET','PEN':'PEN','':'?'};
+
+  let html = '';
+  let curDate = '';
+
+  MATCHES.forEach(m => {
+    if (m.date !== curDate) {
+      curDate = m.date;
+      html += `<div class="ap-dayhdr">${m.date}</div>`;
+    }
+
+    const lv = liveScores[m.id];
+    const isFinal = lv && lv.status === 'final';
+    const isLive  = lv && lv.status === 'in_progress';
+    const hasScore = lv && lv.homeScore != null && lv.awayScore != null;
+
+    let scorePill = '';
+    if (isFinal && hasScore) {
+      scorePill = `<span class="ap-match-score">✔ ${lv.homeScore}–${lv.awayScore}</span>`;
+    } else if (isLive && hasScore) {
+      scorePill = `<span class="ap-match-score live">● LIVE ${lv.homeScore}–${lv.awayScore}</span>`;
+    } else {
+      scorePill = `<span class="ap-match-score pending">${isLocked(m) ? 'In progress' : 'Not started'}</span>`;
+    }
+
+    html += `<div class="ap-match">
+      <div class="ap-match-hdr">
+        <span class="ap-match-title">Match ${m.id} · ${m.home} vs ${m.away}</span>
+        ${scorePill}
+      </div>
+      <table class="apt">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Score</th>
+            <th>Qualifies</th>
+            <th>Ending</th>
+            <th>Pts</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+    PLAYERS.forEach((name, pi) => {
+      const av = AVATARS[pi] || AVATARS[0];
+      const d  = allData[name];
+      const p  = d && d.preds && d.preds[m.id] ? d.preds[m.id] : null;
+
+      if (!p || (!p.q && !p.hs && !p.as)) {
+        html += `<tr>
+          <td><span class="ap-av" style="background:${av.bg};color:${av.c}">${name.slice(0,2).toUpperCase()}</span>${name}</td>
+          <td colspan="4" class="no-pred">No prediction yet</td>
+        </tr>`;
+        return;
+      }
+
+      const sc = (p.hs !== '' && p.as !== '') ? `${p.hs}–${p.as}` : '?–?';
+      const endLabel = eL[p.e] || '?';
+
+      // Points earned (only if final)
+      const r = calcEarnedPts(p, lv, m);
+      let ptsCell = '';
+      if (isFinal) {
+        ptsCell = `<span class="ap-pts ${r.pts>0?'earned':''}">${r.pts}</span>`;
+      } else {
+        ptsCell = `<span class="ap-pts">—</span>`;
+      }
+
+      // Highlight correct predictions
+      const scoreCorrect = isFinal && r.sOk;
+      const qualCorrect  = isFinal && r.qOk;
+      const endCorrect   = isFinal && r.eOk;
+
+      html += `<tr>
+        <td><span class="ap-av" style="background:${av.bg};color:${av.c}">${name.slice(0,2).toUpperCase()}</span>${name}</td>
+        <td><span class="ap-score" style="${scoreCorrect?'color:#166534':''}">${sc}</span></td>
+        <td><span class="ap-q" style="${qualCorrect?'color:#166534':'color:#555'}">${p.q||'?'}</span></td>
+        <td><span class="ap-e">${endLabel}</span></td>
+        <td>${ptsCell}</td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+  });
+
+  el.innerHTML = html;
 }
 
 // ─── LEADERBOARD ────────────────────────────────────
@@ -992,6 +1114,7 @@ setInterval(async()=>{
   await fetchScores();
   renderAll();
   if(document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
+  if(document.getElementById('page-allpicks').classList.contains('active')) renderAllPicks();
 }, 3 * 60 * 1000);
 </script>
 </body>
