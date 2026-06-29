@@ -445,150 +445,184 @@ function applyFirebasePreds(savedPreds) {
 }
 
 // ─── LIVE SCORES ────────────────────────────────────
-// Primary: worldcup26.ir (CORS-open, real-time WC2026)
-// Fallback: openfootball GitHub JSON
+// Primary:  football-data.org (free API key, CORS-open, live scores)
+// Fallback: openfootball GitHub JSON (updates ~1hr after match)
 // Last resort: hardcoded confirmed results
 
+const FDORG_KEY  = 'd10b957afefe4fd68e64b5944567a0d4';
+const FDORG_BASE = 'https://api.football-data.org/v4';
+// WC 2026 competition ID on football-data.org
+const WC_ID      = 2000;
+
 const MATCH_MAP = {
-  1:  {h:'RSA', a:'CAN', hName:'South Africa',  aName:'Canada'},
-  2:  {h:'BRA', a:'JPN', hName:'Brazil',         aName:'Japan'},
-  3:  {h:'GER', a:'PAR', hName:'Germany',        aName:'Paraguay'},
-  4:  {h:'NED', a:'MAR', hName:'Netherlands',    aName:'Morocco'},
-  5:  {h:'CIV', a:'NOR', hName:'Ivory Coast',    aName:'Norway'},
-  6:  {h:'FRA', a:'SWE', hName:'France',         aName:'Sweden'},
-  7:  {h:'MEX', a:'ECU', hName:'Mexico',         aName:'Ecuador'},
-  8:  {h:'ENG', a:'COD', hName:'England',        aName:'DR Congo'},
-  9:  {h:'BEL', a:'SEN', hName:'Belgium',        aName:'Senegal'},
-  10: {h:'USA', a:'BIH', hName:'USA',            aName:'Bosnia & Herz.'},
-  11: {h:'ESP', a:'AUT', hName:'Spain',          aName:'Austria'},
-  12: {h:'POR', a:'CRO', hName:'Portugal',       aName:'Croatia'},
-  13: {h:'SUI', a:'DZA', hName:'Switzerland',    aName:'Algeria'},
-  14: {h:'AUS', a:'EGY', hName:'Australia',      aName:'Egypt'},
-  15: {h:'ARG', a:'CPV', hName:'Argentina',      aName:'Cape Verde'},
-  16: {h:'COL', a:'GHA', hName:'Colombia',       aName:'Ghana'},
+  1:  {h:'RSA',a:'CAN',hName:'South Africa', aName:'Canada'},
+  2:  {h:'BRA',a:'JPN',hName:'Brazil',        aName:'Japan'},
+  3:  {h:'GER',a:'PAR',hName:'Germany',       aName:'Paraguay'},
+  4:  {h:'NED',a:'MAR',hName:'Netherlands',   aName:'Morocco'},
+  5:  {h:'CIV',a:'NOR',hName:'Ivory Coast',   aName:'Norway'},
+  6:  {h:'FRA',a:'SWE',hName:'France',        aName:'Sweden'},
+  7:  {h:'MEX',a:'ECU',hName:'Mexico',        aName:'Ecuador'},
+  8:  {h:'ENG',a:'COD',hName:'England',       aName:'DR Congo'},
+  9:  {h:'BEL',a:'SEN',hName:'Belgium',       aName:'Senegal'},
+  10: {h:'USA',a:'BIH',hName:'USA',           aName:'Bosnia & Herz.'},
+  11: {h:'ESP',a:'AUT',hName:'Spain',         aName:'Austria'},
+  12: {h:'POR',a:'CRO',hName:'Portugal',      aName:'Croatia'},
+  13: {h:'SUI',a:'DZA',hName:'Switzerland',   aName:'Algeria'},
+  14: {h:'AUS',a:'EGY',hName:'Australia',     aName:'Egypt'},
+  15: {h:'ARG',a:'CPV',hName:'Argentina',     aName:'Cape Verde'},
+  16: {h:'COL',a:'GHA',hName:'Colombia',      aName:'Ghana'},
 };
 
-// Hardcoded confirmed results — always reliable fallback
-const CONFIRMED = [
-  {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN'},
-  {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA'},
-];
+// Also map full country names football-data.org might use
+const FD_NAME_MAP = {
+  'congo dr':'cod', 'dr congo':'cod', 'democratic republic of congo':'cod',
+  'bosnia and herzegovina':'bih', 'bosnia & herzegovina':'bih',
+  'ivory coast':'civ', "côte d'ivoire":'civ', 'cote d ivoire':'civ',
+  'cape verde':'cpv', 'cape verde islands':'cpv',
+  'south africa':'rsa', 'usa':'usa', 'united states':'usa',
+};
 
 function normStr(s) { return (s||'').toLowerCase().replace(/[^a-z]/g,''); }
 
-function parseStatus(st) {
-  st = (st||'').toLowerCase();
-  if (st.includes('finish')||st.includes('final')||st==='ft'||st.includes('ended')||st==='completed'||st==='full-time') return 'final';
-  if (st.includes('live')||st.includes('progress')||st.includes('1h')||st.includes('2h')||st==='ht'||st.includes('ongoing')||st==='in_progress') return 'in_progress';
+function getAbbr(name) {
+  const n = normStr(name);
+  if (FD_NAME_MAP[n]) return FD_NAME_MAP[n].toUpperCase();
+  // Try to match against MATCH_MAP home/away names
+  for (const mm of Object.values(MATCH_MAP)) {
+    if (normStr(mm.hName) === n) return mm.h;
+    if (normStr(mm.aName) === n) return mm.a;
+  }
+  return name.slice(0,3).toUpperCase();
+}
+
+function parseFDStatus(status) {
+  // football-data.org statuses: SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, AWARDED
+  if (!status) return 'scheduled';
+  const s = status.toUpperCase();
+  if (s === 'FINISHED' || s === 'AWARDED') return 'final';
+  if (s === 'IN_PLAY' || s === 'PAUSED') return 'in_progress';
   return 'scheduled';
 }
 
-function applyHardcodedResults() {
-  CONFIRMED.forEach(m => { liveScores[m.id] = m; });
-}
-
-function applyMatchResult(mid, hs, as, status, mm) {
-  let winner = null;
-  if (status === 'final' && hs != null && as != null) {
-    if (hs > as) winner = mm.h;
-    else if (as > hs) winner = mm.a;
-  }
-  liveScores[mid] = { id: mid, homeScore: hs, awayScore: as, status, winner };
+function statusFromKickoff(ko) {
+  const now = Date.now();
+  if (now < ko) return 'scheduled';
+  if (now < ko + 115 * 60 * 1000) return 'in_progress';
+  return 'in_progress'; // still show as live until we get final score
 }
 
 async function fetchScores() {
-  // Always start with confirmed results
-  applyHardcodedResults();
-
-  // Try worldcup26.ir
+  // ── PRIMARY: football-data.org ──────────────────────
   try {
-    const res = await fetch('https://worldcup26.ir/get/games?t=' + Date.now(), {cache:'no-store'});
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const raw = await res.json();
+    const res = await fetch(`${FDORG_BASE}/competitions/${WC_ID}/matches?stage=LAST_32`, {
+      headers: { 'X-Auth-Token': FDORG_KEY },
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error('football-data.org HTTP ' + res.status);
+    const data = await res.json();
+    const matches = data.matches || [];
 
-    // API may return array directly or {data:[...]} or {games:[...]}
-    const games = Array.isArray(raw) ? raw
-                : Array.isArray(raw.data) ? raw.data
-                : Array.isArray(raw.games) ? raw.games
-                : Array.isArray(raw.matches) ? raw.matches
-                : null;
+    if (matches.length === 0) throw new Error('No matches returned from football-data.org');
 
-    if (!games || games.length === 0) throw new Error('No games in response');
-
-    // Build lookup — try various field names the API might use
+    // Build lookup by normalized team name pair
     const lookup = {};
-    games.forEach(g => {
-      // Get team names from various possible structures
-      const h = g.home_team_name || g.homeTeam?.name || g.home?.name || g.home || g.team1?.name || g.team1 || '';
-      const a = g.away_team_name || g.awayTeam?.name || g.away?.name || g.away || g.team2?.name || g.team2 || '';
-      if (!h || !a) return;
-      lookup[normStr(h)+'_'+normStr(a)] = { g, h, a };
+    matches.forEach(m => {
+      if (!m.homeTeam || !m.awayTeam) return;
+      const hN = normStr(m.homeTeam.name || m.homeTeam.shortName || '');
+      const aN = normStr(m.awayTeam.name || m.awayTeam.shortName || '');
+      if (hN && aN) lookup[hN + '_' + aN] = m;
     });
 
     let matched = 0;
     Object.entries(MATCH_MAP).forEach(([id, mm]) => {
       const mid = parseInt(id);
-      // Skip already confirmed finals
-      if (liveScores[mid] && liveScores[mid].status === 'final') { matched++; return; }
+      const key = normStr(mm.hName) + '_' + normStr(mm.aName);
+      const m = lookup[key];
 
-      const entry = lookup[normStr(mm.hName)+'_'+normStr(mm.aName)];
-      if (!entry) return;
-      const g = entry.g;
+      if (!m) {
+        // Try time-based status as fallback
+        const ourM = MATCHES.find(x => x.id === mid);
+        if (ourM && !liveScores[mid]) {
+          liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:statusFromKickoff(ourM.ko), winner:null};
+        }
+        return;
+      }
+
       matched++;
+      const status = parseFDStatus(m.status);
+      const hs = m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? null;
+      const as = m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? null;
 
-      // Parse score from various possible structures
-      const hs = g.home_score ?? g.homeScore ?? g.home_team_score ?? g.score?.home ?? g.goals?.home ?? null;
-      const as = g.away_score ?? g.awayScore ?? g.away_team_score ?? g.score?.away ?? g.goals?.away ?? null;
-      const status = parseStatus(g.status || g.match_status || g.matchStatus || g.state || '');
+      let winner = null;
+      if (status === 'final' && hs != null && as != null) {
+        if (hs > as) winner = mm.h;
+        else if (as > hs) winner = mm.a;
+        // Draw at 90min = went to ET/PEN, winner via penalties
+        if (hs === as && m.score?.penalties) {
+          const ph = m.score.penalties.home, pa = m.score.penalties.away;
+          if (ph > pa) winner = mm.h;
+          else if (pa > ph) winner = mm.a;
+        }
+      }
 
-      applyMatchResult(mid, hs != null ? parseInt(hs) : null, as != null ? parseInt(as) : null, status, mm);
+      liveScores[mid] = {id:mid, homeScore:hs, awayScore:as, status, winner};
     });
 
-    if (matched > 0) { setSync('ok', '✓ Live scores updated'); return; }
-    throw new Error('No matches matched in worldcup26.ir response');
+    if (matched > 0) {
+      setSync('ok', '✓ Live scores updated');
+      return;
+    }
+    throw new Error('No R32 matches matched — may need different stage filter');
 
   } catch(e1) {
-    console.log('worldcup26.ir failed:', e1.message);
+    console.log('football-data.org failed:', e1.message);
 
-    // Fallback: openfootball
+    // ── FALLBACK: openfootball GitHub JSON ──────────────
     try {
-      const res2 = await fetch('https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json?t='+Date.now(), {cache:'no-store'});
-      if (!res2.ok) throw new Error('HTTP ' + res2.status);
-      const data = await res2.json();
-      const matches = data.matches || [];
+      const url = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json?t=' + Date.now();
+      const res2 = await fetch(url, {cache:'no-store'});
+      if (!res2.ok) throw new Error('openfootball HTTP ' + res2.status);
+      const data2 = await res2.json();
+      const matches2 = data2.matches || [];
 
       const lookup2 = {};
-      matches.forEach(m => { lookup2[normStr(m.team1)+'_'+normStr(m.team2)] = m; });
+      matches2.forEach(m => {
+        if (m.team1 && m.team2)
+          lookup2[normStr(m.team1)+'_'+normStr(m.team2)] = m;
+      });
 
       Object.entries(MATCH_MAP).forEach(([id, mm]) => {
         const mid = parseInt(id);
-        if (liveScores[mid] && liveScores[mid].status === 'final') return;
-        const match = lookup2[normStr(mm.hName)+'_'+normStr(mm.aName)];
-        if (!match) {
-          // Not in openfootball yet — use kickoff time to determine status
-          const ourM = MATCHES.find(x => x.id === mid);
-          if (ourM) {
-            const now = Date.now();
-            const status = now >= ourM.ko ? (now < ourM.ko + 120*60000 ? 'in_progress' : 'final') : 'scheduled';
-            liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status, winner:null};
-          }
+        if (liveScores[mid]?.status === 'final') return; // keep confirmed results
+        const ourM = MATCHES.find(x => x.id === mid);
+        const m = lookup2[normStr(mm.hName)+'_'+normStr(mm.aName)];
+
+        if (!m) {
+          if (ourM) liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:statusFromKickoff(ourM.ko), winner:null};
           return;
         }
-        if (!match.score || !match.score.ft) {
-          const ourM = MATCHES.find(x => x.id === mid);
-          const kicked = ourM && Date.now() >= ourM.ko;
-          liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:kicked?'in_progress':'scheduled', winner:null};
-          return;
+        if (m.score?.ft) {
+          const hs=m.score.ft[0], as=m.score.ft[1];
+          liveScores[mid] = {id:mid, homeScore:hs, awayScore:as, status:'final', winner: hs>as?mm.h:as>hs?mm.a:null};
+        } else {
+          liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:ourM?statusFromKickoff(ourM.ko):'scheduled', winner:null};
         }
-        applyMatchResult(mid, match.score.ft[0], match.score.ft[1], 'final', mm);
       });
 
       setSync('ok', '✓ Scores updated');
     } catch(e2) {
       console.log('openfootball also failed:', e2.message);
-      setSync('ok', '✓ Connected (using cached scores)');
+      applyHardcodedResults();
+      setSync('ok', '✓ Connected (cached scores)');
     }
   }
+}
+
+function applyHardcodedResults() {
+  [
+    {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN'},
+    {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA'},
+  ].forEach(m => { liveScores[m.id] = m; });
 }
 
 // ─── HELPERS ────────────────────────────────────────
@@ -787,10 +821,13 @@ function renderAll() {
       : `<span class="lkbadge open">${u||'Open'}</span>`;
 
     const hasLiveScore = lv && lv.homeScore != null && lv.awayScore != null;
-    const scoreStr = hasLiveScore ? `${lv.homeScore}–${lv.awayScore}` : '–';
     const livebar = isLv
-      ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${scoreStr} ${m.away}</b></div>`
-      : isFn ? `<div class="livebar final">✔ Final: <b>${m.home} ${hasLiveScore ? lv.homeScore+'–'+lv.awayScore : '–'} ${m.away}</b></div>` : '';
+      ? hasLiveScore
+        ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
+        : `<div class="livebar live"><span><span class="livedot"></span>LIVE NOW</span> <b>${m.home} vs ${m.away}</b> <span style="font-size:11px;font-weight:500;opacity:.7">— score updates every 60s</span></div>`
+      : isFn
+        ? `<div class="livebar final">✔ Final: <b>${m.home} ${hasLiveScore ? lv.homeScore+'–'+lv.awayScore : '–'} ${m.away}</b></div>`
+        : '';
 
     // Save button — only shown if locked=false AND user is in edit mode
     const saveBtn = (!lk && editMode) ? `
@@ -1344,6 +1381,53 @@ function showToast(msg) {
   t._t = setTimeout(() => t.style.opacity = '0', 4000);
 }
 
+// ─── LIVE BAR UPDATER ───────────────────────────────
+// Updates score banners on existing cards without destroying input field values
+function updateLiveBars() {
+  MATCHES.forEach(m => {
+    const card = document.getElementById('card-' + m.id);
+    if (!card) return;
+    const lv = liveScores[m.id];
+    if (!lv || lv.status === 'scheduled') return;
+
+    const isLv = lv.status === 'in_progress';
+    const isFn = lv.status === 'final';
+    const hs = lv.homeScore;
+    const as = lv.awayScore;
+    const hasScore = hs != null && as != null;
+    const scoreStr = hasScore ? hs + '–' + as : '–';
+
+    // Remove existing live bar if any
+    const existing = card.querySelector('.livebar');
+    if (existing) existing.remove();
+
+    // Build new live bar
+    let barHtml = '';
+    if (isLv) {
+      barHtml = `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${scoreStr} ${m.away}</b></div>`;
+    } else if (isFn) {
+      barHtml = `<div class="livebar final">✔ Final: <b>${m.home} ${scoreStr} ${m.away}</b></div>`;
+    }
+
+    if (barHtml) {
+      // Insert after ctop div
+      const ctop = card.querySelector('.ctop');
+      if (ctop) {
+        ctop.insertAdjacentHTML('afterend', barHtml);
+      }
+    }
+
+    // Update lock badge if match is now final
+    if (isFn) {
+      const badge = card.querySelector('.lkbadge');
+      if (badge) {
+        badge.className = 'lkbadge locked';
+        badge.textContent = '🔒 Locked';
+      }
+    }
+  });
+}
+
 // ─── REFRESH ────────────────────────────────────────
 async function refreshApp() {
   const btn = document.getElementById('refresh-btn');
@@ -1383,7 +1467,8 @@ renderAll();
 
 // Then fetch live scores from API
 fetchScores().then(() => {
-  renderAll();
+  updateLiveBars();   // fast: just update score banners on existing cards
+  renderAll();        // full re-render with fresh scores
   if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
   if (document.getElementById('page-allpicks').classList.contains('active')) renderAllPicks();
 });
@@ -1400,6 +1485,7 @@ if (!isStandalone) {
 // Smart refresh: every 60s during live matches, every 3min otherwise
 async function smartRefresh() {
   await fetchScores();
+  updateLiveBars(); // instant update without full re-render
   renderAll();
   if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
   if (document.getElementById('page-allpicks').classList.contains('active')) renderAllPicks();
