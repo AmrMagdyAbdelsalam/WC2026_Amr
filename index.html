@@ -26,52 +26,69 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
 .page{padding:14px 18px 0;display:none}
 .page.active{display:block}
+/* name row */
 .nrow{display:flex;gap:8px;margin-bottom:12px}
 .nrow select{flex:1;font-size:14px;height:42px;padding:0 10px;border-radius:8px;border:1.5px solid #ccc;background:#fff;color:#1a1a1a;font-family:inherit;font-weight:500}
-.savebtn{padding:0 18px;height:42px;border-radius:8px;border:none;background:#16a34a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
-.savebtn:hover{background:#15803d}
-.savebtn:disabled{opacity:.5;cursor:not-allowed}
+/* alert */
 .alertbox{font-size:13px;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-weight:500;line-height:1.5;display:none}
 .alertbox.ok{background:#dcfce7;color:#166534;display:block}
 .alertbox.err{background:#fee2e2;color:#7f1d1d;display:block}
+/* day */
 .dayhdr{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin:14px 0 8px}
+/* card */
 .card{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:14px 15px;margin-bottom:8px}
 .card.locked{background:#f9f9f7;opacity:.8}
+.card.saved{border-color:#86efac}
 .ctop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
 .cmeta{font-size:10px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .cko{font-size:11px;color:#555;margin-top:3px;font-weight:500}
 .cbadges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.ptsbadge{font-size:11px;background:#f5f5f0;border:1px solid #e0ddd6;border-radius:20px;padding:2px 8px;color:#555;font-weight:600;white-space:nowrap}
 .lkbadge{font-size:11px;border-radius:20px;padding:3px 10px;font-weight:700;white-space:nowrap}
 .lkbadge.open{background:#dcfce7;color:#166534}
 .lkbadge.soon{background:#fef3c7;color:#92400e}
 .lkbadge.locked{background:#fee2e2;color:#991b1b}
+.lkbadge.saved{background:#dcfce7;color:#166534}
+/* live bar */
 .livebar{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:13px;font-weight:700}
 .livebar.live{background:#dcfce7;color:#166534}
 .livebar.final{background:#f5f5f0;color:#555;font-weight:500}
 .livedot{width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;margin-right:3px;animation:pulse 1.2s infinite}
+/* teams */
 .teams{display:grid;grid-template-columns:1fr 30px 1fr;gap:6px;align-items:center;margin-bottom:10px}
 .tn{font-size:14px;font-weight:700}
 .tn.r{text-align:right}
 .vs{font-size:11px;color:#888;text-align:center;font-weight:600}
+/* score */
 .scrow{display:grid;grid-template-columns:1fr 22px 1fr;gap:6px;align-items:center;margin-bottom:10px}
 .si{width:100%;text-align:center;font-size:22px;font-weight:700;padding:8px 4px;border:1.5px solid #ccc;border-radius:8px;background:#f9f9f7;color:#1a1a1a;font-family:inherit}
 .si:focus{outline:none;border-color:#16a34a;background:#fff}
 .si:disabled{opacity:.35;cursor:not-allowed}
 .scdash{text-align:center;font-size:16px;color:#888}
 .sl{font-size:10px;color:#888;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+/* qual */
 .qrow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
 .qbtn{border:1.5px solid #ccc;background:#f9f9f7;border-radius:8px;padding:9px 6px;font-size:12px;cursor:pointer;text-align:center;color:#555;font-family:inherit;font-weight:600;transition:all .15s;user-select:none;line-height:1.3}
 .qbtn:hover:not(.off){border-color:#16a34a;background:#dcfce7;color:#166534}
 .qbtn.on{border-color:#16a34a;background:#dcfce7;color:#166534}
 .qbtn.off{pointer-events:none;opacity:.35}
-.erow{display:flex;gap:5px}
+/* end */
+.erow{display:flex;gap:5px;margin-bottom:10px}
 .ebtn{flex:1;border:1.5px solid #ccc;background:#f9f9f7;border-radius:8px;padding:7px 4px;font-size:11px;cursor:pointer;text-align:center;color:#555;font-family:inherit;font-weight:600;transition:all .15s;user-select:none}
 .ebtn:hover:not(.off){border-color:#1d4ed8;background:#dbeafe;color:#1e3a8a}
 .ebtn.on{border-color:#1d4ed8;background:#dbeafe;color:#1e3a8a}
 .ebtn.off{pointer-events:none;opacity:.35}
-.drawwarn{font-size:11px;color:#92400e;background:#fef3c7;border-radius:8px;padding:6px 8px;margin-top:8px;display:none;line-height:1.5}
+/* per-match save btn */
+.msavebtn{width:100%;padding:10px;border-radius:8px;border:none;background:#16a34a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.msavebtn:hover:not(:disabled){background:#15803d}
+.msavebtn:disabled{opacity:.5;cursor:not-allowed}
+.msavebtn.done{background:#166534}
+/* misc */
+.drawwarn{font-size:11px;color:#92400e;background:#fef3c7;border-radius:8px;padding:6px 8px;margin-bottom:8px;display:none;line-height:1.5}
 .lockmsg{font-size:11px;color:#888;margin-top:6px;display:none;font-weight:500}
+.matchalert{font-size:12px;border-radius:6px;padding:7px 10px;margin-bottom:8px;font-weight:500;display:none}
+.matchalert.ok{background:#dcfce7;color:#166534;display:block}
+.matchalert.err{background:#fee2e2;color:#7f1d1d;display:block}
+/* summary */
 .sumwrap{background:#fff;border:1px solid #e0ddd6;border-radius:12px;overflow:hidden;margin-bottom:10px}
 .sumhdr{padding:13px 16px;border-bottom:1px solid #e0ddd6;font-size:14px;font-weight:700}
 .sumrow{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:9px 16px;border-bottom:1px solid #e0ddd6;color:#555}
@@ -79,6 +96,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sumrow span:last-child{color:#1a1a1a;font-weight:600;text-align:right;max-width:55%}
 .copybtn{width:100%;padding:13px;border-radius:8px;border:1.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px}
 .copybtn:hover{background:#f5f5f0}
+/* leaderboard */
 .sharebox{background:#ede9fe;border:1px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:12px}
 .sharetitle{font-size:11px;font-weight:700;color:#4c1d95;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
 .shareurl{font-size:12px;color:#5b21b6;word-break:break-all;background:#fff;border-radius:6px;padding:9px 12px;border:1px solid #c4b5fd;cursor:pointer;font-weight:500;line-height:1.5}
@@ -97,6 +115,7 @@ table.lbt tr:last-child td{border:none}
 .av{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .empty{text-align:center;padding:3rem 1rem;color:#888;font-size:14px;line-height:1.8}
 .lbnote{font-size:11px;color:#888;margin-top:8px;text-align:center;line-height:1.6;padding:0 4px}
+/* admin */
 .admincard{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:20px;margin-bottom:12px}
 .admincard h3{font-size:15px;font-weight:700;margin-bottom:12px}
 .pwrow{display:flex;gap:8px}
@@ -156,7 +175,6 @@ table.lbt tr:last-child td{border:none}
         <option>Nashaat</option>
         <option>Zeyad</option>
       </select>
-      <button class="savebtn" id="savebtn" onclick="savePreds()">💾 Save</button>
     </div>
     <div class="alertbox" id="main-alert"></div>
     <div id="matchlist"></div>
@@ -175,7 +193,7 @@ table.lbt tr:last-child td{border:none}
   <!-- LEADERBOARD -->
   <div id="page-leaderboard" class="page">
     <div style="height:12px"></div>
-    <div id="lbcontent"><div class="empty">Open this tab to load the leaderboard</div></div>
+    <div id="lbcontent"><div class="empty">Open this tab to load scores</div></div>
   </div>
 
   <!-- ADMIN -->
@@ -205,9 +223,6 @@ table.lbt tr:last-child td{border:none}
             Editing: <b id="adminname" style="color:#4c1d95"></b>
           </div>
           <div id="admincards"></div>
-          <button class="adminsavebtn" id="adminsavebtn" onclick="saveAdmin()">
-            💾 Save all changes
-          </button>
           <div class="alertbox" id="admin-alert" style="margin-top:10px"></div>
         </div>
       </div>
@@ -219,9 +234,7 @@ table.lbt tr:last-child td{border:none}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-// ═══════════════════════════════
-// FIREBASE
-// ═══════════════════════════════
+// ─── FIREBASE ───────────────────────────────────────
 firebase.initializeApp({
   apiKey: "AIzaSyDBVvzhx5KzktWcj-Tzg5TUrgaaQawRy00",
   authDomain: "wc2026-c7709.firebaseapp.com",
@@ -233,9 +246,7 @@ firebase.initializeApp({
 });
 const db = firebase.database();
 
-// ═══════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════
+// ─── DATA ───────────────────────────────────────────
 const PLAYERS = ['Aly','Assal','Hindy','Magdy','Nashaat','Zeyad'];
 const AVATARS = [
   {bg:'#ede9fe',c:'#4c1d95'},{bg:'#dcfce7',c:'#166534'},
@@ -261,62 +272,49 @@ const MATCHES = [
   {id:16, date:'Fri Jul 3',  home:'Colombia',      away:'Ghana',          hA:'COL', aA:'GHA', ko:Date.UTC(2026,6,4,1,30)},
 ];
 
-// ═══════════════════════════════
-// STATE
-// ═══════════════════════════════
+// ─── STATE ──────────────────────────────────────────
 function emptyPreds() {
   const p = {};
   MATCHES.forEach(m => { p[m.id] = {hs:'', as:'', q:'', e:'90'}; });
   return p;
 }
 let preds = emptyPreds();
+let allData = {};
+let liveScores = {};
+let firebaseReady = false;
 let adminPlayer = null;
 let adminPreds = emptyPreds();
-let liveScores = {};
-let allData = {};
-let firebaseReady = false;
 
-// ═══════════════════════════════
-// SYNC STATUS
-// ═══════════════════════════════
+// ─── SYNC STATUS ────────────────────────────────────
 function setSync(state, msg) {
-  document.getElementById('dot').className = 'dot' + (state==='ok'?'':state==='busy'?' yellow':' red');
+  document.getElementById('dot').className = 'dot'+(state==='ok'?'':state==='busy'?' yellow':' red');
   document.getElementById('synctxt').textContent = msg;
 }
 
-// ═══════════════════════════════
-// FIREBASE HELPERS
-// ═══════════════════════════════
-function fbSave(name, data) {
-  return db.ref('predictions/' + name).set(data);
-}
-function fbLoadAll() {
-  return db.ref('predictions').get().then(snap => snap.exists() ? snap.val() : {});
+// ─── FIREBASE ───────────────────────────────────────
+// Save only one match for a player
+async function fbSaveMatch(name, matchId, matchPred) {
+  await db.ref(`predictions/${name}/preds/${matchId}`).set(matchPred);
+  await db.ref(`predictions/${name}/name`).set(name);
+  await db.ref(`predictions/${name}/t`).set(Date.now());
 }
 
-// Real-time listener — fires immediately on connect and on every change
+// Real-time listener
 db.ref('predictions').on('value', snap => {
   allData = snap.val() || {};
   firebaseReady = true;
   setSync('ok', '✓ Connected — real-time sync active');
-
-  // Reload current player's predictions if one is selected
   const name = document.getElementById('pname').value;
   if (name && allData[name] && allData[name].preds) {
-    loadPredsFromData(allData[name].preds);
+    applyFirebasePreds(allData[name].preds);
     renderAll();
   }
-
-  // Refresh leaderboard if open
-  if (document.getElementById('page-leaderboard').classList.contains('active')) {
-    renderLB();
-  }
+  if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
 });
 
-function loadPredsFromData(savedPreds) {
-  // Only load — don't overwrite fields user is actively editing
+function applyFirebasePreds(savedPreds) {
   MATCHES.forEach(m => {
-    if (savedPreds[m.id]) {
+    if (savedPreds && savedPreds[m.id]) {
       preds[m.id] = {
         hs: savedPreds[m.id].hs || '',
         as: savedPreds[m.id].as || '',
@@ -327,9 +325,7 @@ function loadPredsFromData(savedPreds) {
   });
 }
 
-// ═══════════════════════════════
-// LIVE SCORES
-// ═══════════════════════════════
+// ─── LIVE SCORES ────────────────────────────────────
 async function fetchScores() {
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -337,7 +333,7 @@ async function fetchScores() {
       body: JSON.stringify({
         model:'claude-sonnet-4-6', max_tokens:800,
         system:'Return ONLY raw JSON no markdown. Format: {"matches":[{"id":1,"homeScore":0,"awayScore":0,"status":"scheduled","winner":null}]}. status: scheduled|in_progress|final. winner: home abbr or away abbr or null.',
-        messages:[{role:'user', content:'WC2026 R32 scores today Jun 28 2026: 1=RSA vs CAN(19UTC),2=BRA vs JPN(Jun29 17UTC),3=GER vs PAR(Jun29 20:30UTC),4=NED vs MAR(Jun30 1UTC),5=CIV vs NOR(Jun30 17UTC),6=FRA vs SWE(Jun30 21UTC),7=MEX vs ECU(Jul1 1UTC),8=ENG vs COD(Jul1 16UTC),9=BEL vs SEN(Jul1 20UTC),10=USA vs BIH(Jul2 0UTC),11=ESP vs AUT(Jul2 19UTC),12=POR vs CRO(Jul2 23UTC),13=SUI vs DZA(Jul3 3UTC),14=AUS vs EGY(Jul3 18UTC),15=ARG vs CPV(Jul3 23UTC),16=COL vs GHA(Jul4 1:30UTC). JSON only.'}]
+        messages:[{role:'user',content:'WC2026 R32 scores today Jun 28 2026: 1=RSA vs CAN(19UTC),2=BRA vs JPN(Jun29 17UTC),3=GER vs PAR(Jun29 20:30UTC),4=NED vs MAR(Jun30 1UTC),5=CIV vs NOR(Jun30 17UTC),6=FRA vs SWE(Jun30 21UTC),7=MEX vs ECU(Jul1 1UTC),8=ENG vs COD(Jul1 16UTC),9=BEL vs SEN(Jul1 20UTC),10=USA vs BIH(Jul2 0UTC),11=ESP vs AUT(Jul2 19UTC),12=POR vs CRO(Jul2 23UTC),13=SUI vs DZA(Jul3 3UTC),14=AUS vs EGY(Jul3 18UTC),15=ARG vs CPV(Jul3 23UTC),16=COL vs GHA(Jul4 1:30UTC). JSON only.'}]
       })
     });
     const d = await r.json();
@@ -347,82 +343,79 @@ async function fetchScores() {
   } catch(e) {}
 }
 
-// ═══════════════════════════════
-// HELPERS
-// ═══════════════════════════════
+// ─── HELPERS ────────────────────────────────────────
 function isLocked(m) { return Date.now() >= m.ko - 60000; }
 function koLabel(m) {
   const d = new Date(m.ko + 3*3600000), h = d.getUTCHours(), mi = d.getUTCMinutes();
   return `${h%12||12}${mi?':'+String(mi).padStart(2,'0'):''}${h<12?'am':'pm'} Cairo`;
 }
 function untilLabel(m) {
-  const diff = m.ko - 60000 - Date.now(); if (diff<=0) return null;
-  const tm = Math.floor(diff/60000); if (tm<60) return `locks in ${tm}m`;
-  const h = Math.floor(tm/60), mn = tm%60; if (h<24) return `locks in ${h}h${mn?` ${mn}m`:''}`;
+  const diff = m.ko - 60000 - Date.now(); if(diff<=0) return null;
+  const tm = Math.floor(diff/60000); if(tm<60) return `locks in ${tm}m`;
+  const h = Math.floor(tm/60), mn = tm%60; if(h<24) return `locks in ${h}h${mn?` ${mn}m`:''}`;
   return `locks in ${Math.floor(h/24)}d`;
 }
 function isDraw(id) {
-  const p = preds[id]; return p.hs!=='' && p.as!=='' && p.hs===p.as;
-}
-function calcPts(pred, live, m) {
-  if (!pred) pred = {};
-  if (!live || live.status==='scheduled')
-    return {pts:(pred.q?2:0)+(pred.e?1:0), qOk:false, sOk:false, eOk:false, pend:true};
-  const part = live.status==='in_progress';
-  let pts=0, qOk=false, sOk=false, eOk=false;
-  if (!part && live.winner && pred.q && m) {
-    if ((pred.q===m.home&&live.winner===m.hA)||(pred.q===m.away&&live.winner===m.aA)) { qOk=true; pts+=2; }
-  } else if (part && pred.q) pts+=2;
-  if (!part && live.homeScore!=null && live.awayScore!=null && pred.hs!=='' && pred.as!=='') {
-    if (parseInt(pred.hs)===live.homeScore && parseInt(pred.as)===live.awayScore) { sOk=true; pts+=3; }
-  }
-  if (!part && live.winner && pred.e && m) {
-    const dr = live.homeScore===live.awayScore;
-    if (dr) { if(pred.e==='ET'||pred.e==='PEN'){eOk=true;pts+=1;} }
-    else    { if(pred.e==='90'){eOk=true;pts+=1;} }
-  } else if (part && pred.e) pts+=1;
-  return {pts, qOk, sOk, eOk, part, pend:false};
+  const p = preds[m.id||id]; return p && p.hs!=='' && p.as!=='' && p.hs===p.as;
 }
 
-// ═══════════════════════════════
-// TABS
-// ═══════════════════════════════
+// Points — only from FINISHED matches
+function calcEarnedPts(pred, live, m) {
+  if (!pred || !live || live.status !== 'final') return {pts:0, qOk:false, sOk:false, eOk:false};
+  let pts=0, qOk=false, sOk=false, eOk=false;
+  // Qualifier: 2pts
+  if (live.winner && pred.q) {
+    if ((pred.q===m.home&&live.winner===m.hA)||(pred.q===m.away&&live.winner===m.aA))
+      { qOk=true; pts+=2; }
+  }
+  // Correct score: 3pts
+  if (live.homeScore!=null && live.awayScore!=null && pred.hs!=='' && pred.as!=='') {
+    if (parseInt(pred.hs)===live.homeScore && parseInt(pred.as)===live.awayScore)
+      { sOk=true; pts+=3; }
+  }
+  // Ending: 1pt
+  if (pred.e) {
+    const dr = live.homeScore===live.awayScore;
+    if (dr){if(pred.e==='ET'||pred.e==='PEN'){eOk=true;pts+=1;}}
+    else   {if(pred.e==='90'){eOk=true;pts+=1;}}
+  }
+  return {pts, qOk, sOk, eOk};
+}
+
+// ─── TABS ───────────────────────────────────────────
 function showTab(t) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach((tb,i) =>
-    tb.classList.toggle('active', ['predict','summary','leaderboard','admin'][i]===t));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach((tb,i)=>
+    tb.classList.toggle('active',['predict','summary','leaderboard','admin'][i]===t));
   document.getElementById('page-'+t).classList.add('active');
-  if (t==='summary')     renderSummary();
+  if (t==='summary') renderSummary();
   if (t==='leaderboard') renderLB();
 }
 
-// ═══════════════════════════════
-// PREDICT TAB
-// ═══════════════════════════════
+// ─── PREDICT TAB ────────────────────────────────────
 function onNameChange() {
-  const name = document.getElementById('pname').value;
-  if (!name) return;
+  const name = document.getElementById('pname').value; if(!name) return;
   localStorage.setItem('wc26_name', name);
   preds = emptyPreds();
-  // Load from allData if already fetched, otherwise wait for listener
-  if (firebaseReady && allData[name] && allData[name].preds) {
-    loadPredsFromData(allData[name].preds);
-  }
+  if (firebaseReady && allData[name] && allData[name].preds)
+    applyFirebasePreds(allData[name].preds);
   renderAll();
 }
 
 function renderAll() {
+  const name = document.getElementById('pname').value;
   let html = '', curDate = '';
   MATCHES.forEach(m => {
-    if (m.date !== curDate) { curDate=m.date; html+=`<div class="dayhdr">${m.date}</div>`; }
-    const p   = preds[m.id];
-    const lk  = isLocked(m);
-    const u   = untilLabel(m);
+    if (m.date!==curDate) { curDate=m.date; html+=`<div class="dayhdr">${m.date}</div>`; }
+    const p    = preds[m.id];
+    const lk   = isLocked(m);
+    const u    = untilLabel(m);
     const soon = !lk && u && u.includes('m') && !u.includes('h');
-    const lv  = liveScores[m.id];
+    const lv   = liveScores[m.id];
     const isLv = lv && lv.status==='in_progress';
     const isFn = lv && lv.status==='final';
     const off  = lk ? 'off' : '';
+    const hasSaved = p.q && p.e; // has a complete prediction saved
 
     const lkbadge = lk
       ? `<span class="lkbadge locked">🔒 Locked</span>`
@@ -433,11 +426,19 @@ function renderAll() {
       ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
       : isFn ? `<div class="livebar final">✔ Final: <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>` : '';
 
+    // Save button — hidden if locked, shown otherwise
+    const saveBtn = !lk ? `
+      <div class="matchalert" id="ma-${m.id}"></div>
+      <button class="msavebtn ${hasSaved?'done':''}" id="msave-${m.id}"
+        onclick="saveMatch(${m.id})" ${!name?'disabled':''}>
+        ${hasSaved ? '✓ Saved' : '💾 Save this prediction'}
+      </button>` : '';
+
     html += `
     <div class="card${lk?' locked':''}" id="card-${m.id}">
       <div class="ctop">
         <div><div class="cmeta">Match ${m.id}</div><div class="cko">${koLabel(m)}</div></div>
-        <div class="cbadges">${lkbadge}<span class="ptsbadge" id="pts-${m.id}">0 pts</span></div>
+        <div class="cbadges">${lkbadge}</div>
       </div>
       ${livebar}
       <div class="teams">
@@ -467,96 +468,84 @@ function renderAll() {
           onclick="sp(${m.id},'e',this.dataset.v)">Penalties</div>
       </div>
       <div class="drawwarn" id="dw-${m.id}">⚠️ Draw predicted — pick Extra Time or Penalties, and still choose who qualifies.</div>
-      <div class="lockmsg" id="lm-${m.id}" ${lk?'style="display:block"':''}>🔒 Predictions locked for this match.</div>
+      <div class="lockmsg" id="lm-${m.id}" ${lk?'style="display:block"':''}>🔒 Predictions locked.</div>
+      ${saveBtn}
     </div>`;
   });
   document.getElementById('matchlist').innerHTML = html;
-  MATCHES.forEach(m => updPts(m.id));
 }
 
 function sp(id, field, val) {
   if (isLocked(MATCHES.find(m=>m.id===id))) return;
   preds[id][field] = val;
-  const draw = isDraw(id);
-  const dw = document.getElementById('dw-'+id); if(dw) dw.style.display = draw?'block':'none';
-  if (draw && preds[id].e==='90') preds[id].e = '';
-  document.querySelectorAll(`#q-${id} .qbtn`).forEach(b => b.classList.toggle('on', b.dataset.v===preds[id].q));
-  document.querySelectorAll(`#e-${id} .ebtn`).forEach(b => b.classList.toggle('on', b.dataset.v===preds[id].e));
-  updPts(id);
+  const p = preds[id];
+  const draw = p.hs!=='' && p.as!=='' && p.hs===p.as;
+  const dw = document.getElementById('dw-'+id); if(dw) dw.style.display=draw?'block':'none';
+  if (draw && p.e==='90') { p.e=''; }
+  document.querySelectorAll(`#q-${id} .qbtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===preds[id].q));
+  document.querySelectorAll(`#e-${id} .ebtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===preds[id].e));
+  // Mark save button as unsaved when user edits
+  const btn = document.getElementById('msave-'+id);
+  if (btn) { btn.className='msavebtn'; btn.textContent='💾 Save this prediction'; }
 }
 
-function updPts(id) {
-  const pb = document.getElementById('pts-'+id); if(!pb) return;
-  const p = preds[id], lv = liveScores[id], m = MATCHES.find(x=>x.id===id);
-  if (lv && lv.status!=='scheduled') {
-    const r = calcPts(p,lv,m); pb.textContent = r.pts+' pts'+(r.part?' (live)':'');
-  } else {
-    pb.textContent = ((p.q?2:0)+(p.e?1:0))+' pts';
+async function saveMatch(id) {
+  const name = document.getElementById('pname').value;
+  if (!name) { showMatchAlert(id,'Please select your name first.','err'); return; }
+
+  const p = preds[id];
+  const m = MATCHES.find(x=>x.id===id);
+  const draw = p.hs!=='' && p.as!=='' && p.hs===p.as;
+
+  // Validate
+  if (!p.q) { showMatchAlert(id,'Please select who qualifies.','err'); return; }
+  if (draw && p.e==='90') { showMatchAlert(id,'Draw predicted — pick Extra Time or Penalties.','err'); return; }
+  if (!p.e) { showMatchAlert(id,'Please select the ending method.','err'); return; }
+
+  const btn = document.getElementById('msave-'+id);
+  btn.disabled=true; btn.textContent='Saving…';
+  try {
+    await fbSaveMatch(name, id, {hs:p.hs, as:p.as, q:p.q, e:p.e});
+    btn.className='msavebtn done'; btn.textContent='✓ Saved';
+    showMatchAlert(id,'✓ Saved! Visible to everyone now.','ok');
+  } catch(e) {
+    showMatchAlert(id,'Save failed: '+e.message,'err');
+    btn.textContent='💾 Save this prediction';
   }
+  btn.disabled=false;
+}
+
+function showMatchAlert(id, msg, type) {
+  const el = document.getElementById('ma-'+id); if(!el) return;
+  el.textContent=msg; el.className='matchalert '+type;
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.className='matchalert'; }, 5000);
 }
 
 // Auto-lock check every 30s
 setInterval(() => {
   MATCHES.forEach(m => {
     const card = document.getElementById('card-'+m.id); if(!card) return;
-    const lk = isLocked(m); card.classList.toggle('locked', lk);
-    const lmEl = document.getElementById('lm-'+m.id); if(lmEl) lmEl.style.display = lk?'block':'none';
-    card.querySelectorAll('.si').forEach(el => el.disabled=lk);
-    card.querySelectorAll('.qbtn,.ebtn').forEach(el => { if(lk) el.classList.add('off'); });
+    const lk = isLocked(m); card.classList.toggle('locked',lk);
+    const lmEl = document.getElementById('lm-'+m.id); if(lmEl) lmEl.style.display=lk?'block':'none';
+    card.querySelectorAll('.si').forEach(el=>el.disabled=lk);
+    card.querySelectorAll('.qbtn,.ebtn').forEach(el=>{if(lk)el.classList.add('off');});
+    // Hide save button when locked
+    const sBtn = document.getElementById('msave-'+m.id);
+    if (sBtn && lk) sBtn.style.display='none';
+    const ma = document.getElementById('ma-'+m.id);
+    if (ma && lk) ma.style.display='none';
+    // Update lock badge
     const badge = card.querySelector('.lkbadge'); if(badge){
       const u=untilLabel(m), s=!lk&&u&&u.includes('m')&&!u.includes('h');
-      if(lk)      {badge.className='lkbadge locked';badge.textContent='🔒 Locked';}
-      else if(s)  {badge.className='lkbadge soon';  badge.textContent='⏰ '+u;}
-      else        {badge.className='lkbadge open';   badge.textContent=u||'Open';}
+      if(lk)     {badge.className='lkbadge locked';badge.textContent='🔒 Locked';}
+      else if(s) {badge.className='lkbadge soon';  badge.textContent='⏰ '+u;}
+      else       {badge.className='lkbadge open';   badge.textContent=u||'Open';}
     }
-    updPts(m.id);
   });
 }, 30000);
 
-async function savePreds() {
-  const name = document.getElementById('pname').value;
-  if (!name) { showAlert('main-alert','Please select your name first.','err'); return; }
-
-  // Validate ALL matches that aren't locked
-  const errs = [];
-  MATCHES.forEach(m => {
-    if (isLocked(m)) return; // skip locked matches
-    const p = preds[m.id];
-    if (!p.q) errs.push(`Match ${m.id} (${m.home} vs ${m.away}): select who qualifies`);
-    if (isDraw(m.id) && p.e==='90') errs.push(`Match ${m.id}: draw predicted — pick Extra Time or Penalties`);
-  });
-
-  if (errs.length) {
-    showAlert('main-alert', '⚠️ ' + errs[0] + ` (${errs.length} issue${errs.length>1?'s':''} total)`, 'err');
-    return;
-  }
-
-  const btn = document.getElementById('savebtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
-  setSync('busy','Saving…');
-  try {
-    const payload = { name, preds: JSON.parse(JSON.stringify(preds)), t: Date.now() };
-    await fbSave(name, payload);
-    setSync('ok','✓ Saved — visible to everyone');
-    showAlert('main-alert','✓ Saved! Your predictions are now live for everyone to see.','ok');
-  } catch(e) {
-    setSync('red','Save failed');
-    showAlert('main-alert','Save failed: '+e.message,'err');
-  }
-  btn.disabled = false; btn.textContent = '💾 Save';
-}
-
-function showAlert(id, msg, type) {
-  const el = document.getElementById(id);
-  el.textContent = msg;
-  el.className = 'alertbox ' + type;
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.className='alertbox'; }, 6000);
-}
-
-// ═══════════════════════════════
-// SUMMARY
-// ═══════════════════════════════
+// ─── SUMMARY ────────────────────────────────────────
 function renderSummary() {
   const name = document.getElementById('pname').value;
   document.getElementById('sumtitle').textContent = name ? name+"'s picks" : 'Your picks';
@@ -564,62 +553,62 @@ function renderSummary() {
   document.getElementById('sumcontent').innerHTML = MATCHES.map(m => {
     const p = preds[m.id];
     const sc = (p.hs!==''&&p.as!=='') ? `${p.hs}–${p.as}` : '?–?';
-    const q  = p.q || '?';
-    const e  = eL[p.e] || '?';
-    return `<div class="sumrow"><span>${m.home} vs ${m.away}</span><span>${sc} · ${q} · ${e}</span></div>`;
+    return `<div class="sumrow"><span>${m.home} vs ${m.away}</span><span>${sc} · ${p.q||'?'} · ${eL[p.e]||'?'}</span></div>`;
   }).join('');
 }
-
 function doCopy() {
-  const name = document.getElementById('pname').value || 'Anonymous';
+  const name = document.getElementById('pname').value||'Anonymous';
   const eL = {'90':'90 mins','ET':'Extra Time','PEN':'Penalties','':'?'};
-  let txt = `⚽ WC 2026 R32 Predictions — ${name}\n${'─'.repeat(38)}\n`;
+  let txt = `⚽ WC 2026 R32 — ${name}\n${'─'.repeat(36)}\n`;
   MATCHES.forEach(m => {
-    const p = preds[m.id];
-    const sc = (p.hs!==''&&p.as!=='') ? `${p.hs}–${p.as}` : '?–?';
-    txt += `${m.home} vs ${m.away}: ${sc} | ${p.q||'?'} qualifies | ${eL[p.e]||'?'}\n`;
+    const p=preds[m.id];
+    const sc=(p.hs!==''&&p.as!=='')?`${p.hs}–${p.as}`:'?–?';
+    txt+=`${m.home} vs ${m.away}: ${sc} | ${p.q||'?'} qualifies | ${eL[p.e]||'?'}\n`;
   });
-  navigator.clipboard.writeText(txt).then(() => {
-    const b = document.querySelector('.copybtn');
-    b.textContent = '✓ Copied!';
-    setTimeout(() => b.textContent='📋 Copy as text to share', 2000);
+  navigator.clipboard.writeText(txt).then(()=>{
+    const b=document.querySelector('.copybtn'); b.textContent='✓ Copied!';
+    setTimeout(()=>b.textContent='📋 Copy as text to share',2000);
   });
 }
 
-// ═══════════════════════════════
-// LEADERBOARD
-// ═══════════════════════════════
+// ─── LEADERBOARD ────────────────────────────────────
 function renderLB() {
   const el = document.getElementById('lbcontent');
   const entries = [];
   PLAYERS.forEach(name => {
     const d = allData[name]; if(!d) return;
-    let tot=0, qp=0, sp=0, ep=0, pend=0;
+    // Only count points from FINISHED matches
+    let tot=0, qp=0, sp=0, ep=0, played=0;
     MATCHES.forEach(m => {
-      const r = calcPts((d.preds||{})[m.id], liveScores[m.id], m);
-      tot+=r.pts; if(r.pend)pend++; if(r.qOk)qp+=2; if(r.sOk)sp+=3; if(r.eOk)ep+=1;
+      const live = liveScores[m.id];
+      if (!live || live.status !== 'final') return; // skip non-finished
+      played++;
+      const r = calcEarnedPts((d.preds||{})[m.id], live, m);
+      tot+=r.pts; if(r.qOk)qp+=2; if(r.sOk)sp+=3; if(r.eOk)ep+=1;
     });
-    entries.push({name, tot, qp, sp, ep, pend});
+    entries.push({name, tot, qp, sp, ep, played});
   });
 
+  const url = location.href;
+  let shareHtml = `
+  <div class="sharebox">
+    <div class="sharetitle">📤 Share app with your friends</div>
+    <div class="shareurl" id="shareurl" onclick="copyUrl()">${url}</div>
+    <div class="sharehint">👆 Tap to copy → send to your group chat</div>
+  </div>`;
+
   if (!entries.length) {
-    el.innerHTML = '<div class="empty">🏆<br><br>No predictions saved yet.<br>Be the first to fill yours in!</div>';
+    el.innerHTML = shareHtml + '<div class="empty">🏆<br><br>No finished matches yet.<br>Points will appear here after each match ends.</div>';
     return;
   }
 
   entries.sort((a,b) => b.tot - a.tot);
   const medals = ['🥇','🥈','🥉'];
-  const url = location.href;
 
-  let h = `
-  <div class="sharebox">
-    <div class="sharetitle">📤 Share app with your friends</div>
-    <div class="shareurl" id="shareurl" onclick="copyUrl()">${url}</div>
-    <div class="sharehint">👆 Tap to copy → send to your group chat</div>
-  </div>
+  let h = shareHtml + `
   <div class="lbwrap">
     <div class="lbhdr">
-      <span class="lbtitle">🏆 Live Leaderboard</span>
+      <span class="lbtitle">🏆 Leaderboard</span>
       <button class="lbref" onclick="renderLB()">↻ Refresh</button>
     </div>
     <table class="lbt">
@@ -627,7 +616,7 @@ function renderLB() {
       <tbody>`;
 
   entries.forEach((e,i) => {
-    const ci = PLAYERS.indexOf(e.name), av = AVATARS[ci]||AVATARS[0];
+    const ci=PLAYERS.indexOf(e.name), av=AVATARS[ci]||AVATARS[0];
     const rank = i<3 ? `<span style="font-size:${22-i*2}px">${medals[i]}</span>` : `<b>${i+1}</b>`;
     h += `<tr>
       <td>${rank}</td>
@@ -635,63 +624,62 @@ function renderLB() {
         <span class="av" style="background:${av.bg};color:${av.c}">${e.name.slice(0,2).toUpperCase()}</span>
         <b>${e.name}</b>
       </div></td>
-      <td><div class="ptsn">${e.tot}</div>${e.pend?`<div class="ptss">${e.pend} pending</div>`:''}</td>
+      <td><div class="ptsn">${e.tot}</div><div class="ptss">${e.played} matches</div></td>
       <td>
         ${e.qp?`<span style="color:#166534;font-weight:700">+${e.qp}q</span> `:''}
         ${e.sp?`<span style="color:#1e3a8a;font-weight:700">+${e.sp}s</span> `:''}
         ${e.ep?`<span style="color:#78350f;font-weight:700">+${e.ep}e</span>`:''}
-        ${(!e.qp&&!e.sp&&!e.ep&&!e.pend)?'—':''}
+        ${(!e.qp&&!e.sp&&!e.ep)?'0 pts yet':''}
       </td>
     </tr>`;
   });
 
   h += `</tbody></table></div>
-  <p class="lbnote">🔴 Live via Firebase — updates instantly on all devices<br>q=qualifier · s=score · e=ending method</p>`;
+  <p class="lbnote">Only points from finished matches count · q=qualifier · s=score · e=ending</p>`;
   el.innerHTML = h;
 }
 
 function copyUrl() {
-  navigator.clipboard.writeText(location.href).then(() => {
-    const el = document.getElementById('shareurl');
-    if(el){el.textContent='✓ Copied!'; setTimeout(()=>el.textContent=location.href,2000);}
+  navigator.clipboard.writeText(location.href).then(()=>{
+    const el=document.getElementById('shareurl');
+    if(el){el.textContent='✓ Copied!';setTimeout(()=>el.textContent=location.href,2000);}
   });
 }
 
-// ═══════════════════════════════
-// ADMIN
-// ═══════════════════════════════
+// ─── ADMIN ──────────────────────────────────────────
 function checkPw() {
-  if (document.getElementById('adminpw').value === 'Voda8080') {
-    document.getElementById('admin-login').style.display = 'none';
-    document.getElementById('admin-panel').style.display = 'block';
-    document.getElementById('pbrow').innerHTML =
+  if (document.getElementById('adminpw').value==='Voda8080') {
+    document.getElementById('admin-login').style.display='none';
+    document.getElementById('admin-panel').style.display='block';
+    document.getElementById('pbrow').innerHTML=
       PLAYERS.map(n=>`<div class="pb" id="pb-${n}" onclick="selAdmin('${n}')">${n}</div>`).join('');
   } else {
-    document.getElementById('pwerr').style.display = 'block';
-    document.getElementById('adminpw').value = '';
+    document.getElementById('pwerr').style.display='block';
+    document.getElementById('adminpw').value='';
   }
 }
 
 function selAdmin(name) {
-  adminPlayer = name;
-  PLAYERS.forEach(n => { const b=document.getElementById('pb-'+n); if(b) b.classList.toggle('on',n===name); });
-  document.getElementById('adminname').textContent = name;
-  adminPreds = emptyPreds();
-  if (allData[name] && allData[name].preds) {
-    MATCHES.forEach(m => {
-      if (allData[name].preds[m.id])
-        adminPreds[m.id] = Object.assign({hs:'',as:'',q:'',e:'90'}, allData[name].preds[m.id]);
+  adminPlayer=name;
+  PLAYERS.forEach(n=>{const b=document.getElementById('pb-'+n);if(b)b.classList.toggle('on',n===name);});
+  document.getElementById('adminname').textContent=name;
+  adminPreds=emptyPreds();
+  if (allData[name]&&allData[name].preds) {
+    MATCHES.forEach(m=>{
+      if(allData[name].preds[m.id])
+        adminPreds[m.id]=Object.assign({hs:'',as:'',q:'',e:'90'},allData[name].preds[m.id]);
     });
   }
-  document.getElementById('admineditor').style.display = 'block';
+  document.getElementById('admineditor').style.display='block';
   renderAdminCards();
 }
 
 function renderAdminCards() {
-  let html = '';
-  MATCHES.forEach(m => {
-    const p = adminPreds[m.id];
-    html += `<div class="amc">
+  let html='';
+  MATCHES.forEach(m=>{
+    const p=adminPreds[m.id];
+    const saved = p.q && p.e;
+    html+=`<div class="amc">
       <div class="amct">Match ${m.id} · ${m.home} vs ${m.away}</div>
       <div class="scrow" style="margin-bottom:10px">
         <input class="si" type="number" min="0" max="20" placeholder="0"
@@ -706,54 +694,71 @@ function renderAdminCards() {
         <div class="qbtn ${p.q===m.away?'on':''}" data-v="${m.away}" onclick="aqf(${m.id},this)">${m.away}</div>
       </div>
       <div class="sl">Ending method</div>
-      <div class="erow" id="ae-${m.id}">
+      <div class="erow" id="ae-${m.id}" style="margin-bottom:10px">
         <div class="ebtn ${p.e==='90'?'on':''}" data-v="90" onclick="aef(${m.id},this)">90 mins</div>
         <div class="ebtn ${p.e==='ET'?'on':''}" data-v="ET" onclick="aef(${m.id},this)">Extra time</div>
         <div class="ebtn ${p.e==='PEN'?'on':''}" data-v="PEN" onclick="aef(${m.id},this)">Penalties</div>
       </div>
+      <div class="matchalert" id="ama-${m.id}"></div>
+      <button class="msavebtn ${saved?'done':''}" id="amsave-${m.id}" onclick="saveAdminMatch(${m.id})">
+        ${saved?'✓ Saved':'💾 Save this match'}
+      </button>
     </div>`;
   });
-  document.getElementById('admincards').innerHTML = html;
+  document.getElementById('admincards').innerHTML=html;
 }
 
-function ap(id,field,val){ adminPreds[id][field]=val; }
+function ap(id,field,val){
+  adminPreds[id][field]=val;
+  const btn=document.getElementById('amsave-'+id);
+  if(btn){btn.className='msavebtn';btn.textContent='💾 Save this match';}
+}
 function aqf(id,el){
   adminPreds[id].q=el.dataset.v;
   document.querySelectorAll(`#aq-${id} .qbtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===el.dataset.v));
+  const btn=document.getElementById('amsave-'+id);
+  if(btn){btn.className='msavebtn';btn.textContent='💾 Save this match';}
 }
 function aef(id,el){
   adminPreds[id].e=el.dataset.v;
   document.querySelectorAll(`#ae-${id} .ebtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===el.dataset.v));
+  const btn=document.getElementById('amsave-'+id);
+  if(btn){btn.className='msavebtn';btn.textContent='💾 Save this match';}
 }
 
-async function saveAdmin() {
-  if (!adminPlayer) { showAlert('admin-alert','Select a player first.','err'); return; }
-  const btn = document.getElementById('adminsavebtn');
+async function saveAdminMatch(id) {
+  if (!adminPlayer) { return; }
+  const p=adminPreds[id];
+  if (!p.q) { showAdminMatchAlert(id,'Select who qualifies.','err'); return; }
+  if (!p.e) { showAdminMatchAlert(id,'Select ending method.','err'); return; }
+  const btn=document.getElementById('amsave-'+id);
   btn.disabled=true; btn.textContent='Saving…';
   try {
-    await fbSave(adminPlayer, {name:adminPlayer, preds:JSON.parse(JSON.stringify(adminPreds)), t:Date.now()});
-    showAlert('admin-alert',`✓ Saved for ${adminPlayer} — visible to all devices now`,'ok');
+    await fbSaveMatch(adminPlayer, id, {hs:p.hs,as:p.as,q:p.q,e:p.e});
+    btn.className='msavebtn done'; btn.textContent='✓ Saved';
+    showAdminMatchAlert(id,`✓ Saved for ${adminPlayer}`,'ok');
   } catch(e) {
-    showAlert('admin-alert','Save failed: '+e.message,'err');
+    showAdminMatchAlert(id,'Save failed: '+e.message,'err');
+    btn.textContent='💾 Save this match';
   }
-  btn.disabled=false; btn.textContent='💾 Save all changes';
+  btn.disabled=false;
 }
 
-// ═══════════════════════════════
-// INIT
-// ═══════════════════════════════
-// Restore last selected name
-const savedName = localStorage.getItem('wc26_name');
-if (savedName) {
-  document.getElementById('pname').value = savedName;
-  // preds will be loaded when Firebase listener fires
+function showAdminMatchAlert(id,msg,type){
+  const el=document.getElementById('ama-'+id); if(!el) return;
+  el.textContent=msg; el.className='matchalert '+type;
+  clearTimeout(el._t); el._t=setTimeout(()=>{el.className='matchalert';},4000);
 }
+
+// ─── INIT ───────────────────────────────────────────
+const savedName = localStorage.getItem('wc26_name');
+if (savedName) document.getElementById('pname').value = savedName;
 
 fetchScores().then(renderAll);
-setInterval(async () => {
+setInterval(async()=>{
   await fetchScores(); renderAll();
-  if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
-}, 120000);
+  if(document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
+},120000);
 </script>
 </body>
 </html>
