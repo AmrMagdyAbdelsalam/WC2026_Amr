@@ -115,6 +115,18 @@ table.lbt tr:last-child td{border:none}
 .av{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .empty{text-align:center;padding:3rem 1rem;color:#888;font-size:14px;line-height:1.8}
 .lbnote{font-size:11px;color:#888;margin-top:8px;text-align:center;line-height:1.6;padding:0 4px}
+/* player auth */
+.auth-card{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:18px;margin-bottom:14px}
+.auth-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.auth-sub{font-size:12px;color:#888;margin-bottom:12px;line-height:1.5}
+.auth-row{display:flex;gap:8px}
+.auth-row input{flex:1;font-size:14px;height:42px;padding:0 12px;border-radius:8px;border:1.5px solid #ccc;background:#f5f5f0;color:#1a1a1a;font-family:inherit;font-weight:500}
+.auth-row input:focus{outline:none;border-color:#16a34a}
+.auth-btn{padding:0 18px;height:42px;border-radius:8px;border:none;background:#16a34a;color:#fff;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px}
+.view-only-btn{width:100%;margin-top:10px;padding:10px;border-radius:8px;border:1.5px solid #ccc;background:#fff;color:#555;cursor:pointer;font-family:inherit;font-weight:600;font-size:13px}
+.view-only-btn:hover{background:#f5f5f0}
+.edit-badge{display:inline-flex;align-items:center;gap:6px;background:#dcfce7;color:#166534;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700}
+.view-badge{display:inline-flex;align-items:center;gap:6px;background:#fef3c7;color:#92400e;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700}
 /* admin */
 .admincard{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:20px;margin-bottom:12px}
 .admincard h3{font-size:15px;font-weight:700;margin-bottom:12px}
@@ -165,17 +177,44 @@ table.lbt tr:last-child td{border:none}
   <!-- PREDICT -->
   <div id="page-predict" class="page active">
     <div style="height:12px"></div>
-    <div class="nrow">
-      <select id="pname" onchange="onNameChange()">
-        <option value="">— Select your name —</option>
-        <option>Aly</option>
-        <option>Assal</option>
-        <option>Hindy</option>
-        <option>Magdy</option>
-        <option>Nashaat</option>
-        <option>Zeyad</option>
-      </select>
+
+    <!-- Step 1: pick name -->
+    <div id="player-select-step">
+      <div class="nrow">
+        <select id="pname" onchange="onNameSelect()">
+          <option value="">— Select your name —</option>
+          <option>Aly</option>
+          <option>Assal</option>
+          <option>Hindy</option>
+          <option>Magdy</option>
+          <option>Nashaat</option>
+          <option>Zeyad</option>
+        </select>
+      </div>
     </div>
+
+    <!-- Step 2: password prompt -->
+    <div id="player-auth-step" style="display:none">
+      <div class="auth-card">
+        <div class="auth-title" id="auth-title">Enter your password</div>
+        <div class="auth-sub">Enter your password to save predictions, or tap View Only to browse.</div>
+        <div class="auth-row">
+          <input type="password" id="player-pw" placeholder="Password…"
+            onkeydown="if(event.key==='Enter')doAuth()"/>
+          <button class="auth-btn" onclick="doAuth()">Unlock</button>
+        </div>
+        <div id="auth-err" style="display:none;font-size:12px;color:#991b1b;margin-top:8px;font-weight:600">
+          Wrong password. Try again.
+        </div>
+        <button class="view-only-btn" onclick="enterViewMode()">👁 View only (no saving)</button>
+      </div>
+    </div>
+
+    <!-- Mode badge -->
+    <div id="mode-badge-wrap" style="display:none;margin-bottom:10px">
+      <div id="mode-badge"></div>
+    </div>
+
     <div class="alertbox" id="main-alert"></div>
     <div id="matchlist"></div>
   </div>
@@ -304,9 +343,8 @@ db.ref('predictions').on('value', snap => {
   allData = snap.val() || {};
   firebaseReady = true;
   setSync('ok', '✓ Connected — real-time sync active');
-  const name = document.getElementById('pname').value;
-  if (name && allData[name] && allData[name].preds) {
-    applyFirebasePreds(allData[name].preds);
+  if (currentPlayer && allData[currentPlayer] && allData[currentPlayer].preds) {
+    applyFirebasePreds(allData[currentPlayer].preds);
     renderAll();
   }
   if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
@@ -477,17 +515,114 @@ function showTab(t) {
 }
 
 // ─── PREDICT TAB ────────────────────────────────────
-function onNameChange() {
-  const name = document.getElementById('pname').value; if(!name) return;
+// Player passwords
+const PLAYER_PASSWORDS = {
+  'Aly':     '1111',
+  'Assal':   '7878',
+  'Hindy':   '6776',
+  'Magdy':   '8080',
+  'Nashaat': '8989',
+  'Zeyad':   '9999',
+};
+
+// editMode = true means player is authenticated and can save
+let editMode = false;
+let currentPlayer = '';
+
+function onNameSelect() {
+  const name = document.getElementById('pname').value;
+  if (!name) {
+    document.getElementById('player-auth-step').style.display = 'none';
+    document.getElementById('mode-badge-wrap').style.display = 'none';
+    document.getElementById('matchlist').innerHTML = '';
+    editMode = false;
+    currentPlayer = '';
+    return;
+  }
+  // Show password prompt
+  document.getElementById('player-auth-step').style.display = 'block';
+  document.getElementById('auth-title').textContent = name + ' — Enter your password';
+  document.getElementById('auth-err').style.display = 'none';
+  document.getElementById('player-pw').value = '';
+  document.getElementById('mode-badge-wrap').style.display = 'none';
+  editMode = false;
+  currentPlayer = name;
+  // Pre-load predictions in background
+  loadPlayer(name);
+  setTimeout(() => document.getElementById('player-pw').focus(), 100);
+}
+
+function doAuth() {
+  const name = document.getElementById('pname').value;
+  const pw = document.getElementById('player-pw').value;
+  if (!name) return;
+  if (pw === PLAYER_PASSWORDS[name]) {
+    document.getElementById('auth-err').style.display = 'none';
+    document.getElementById('player-pw').value = '';
+    document.getElementById('player-auth-step').style.display = 'none';
+    editMode = true;
+    currentPlayer = name;
+    localStorage.setItem('wc26_name', name);
+    showModeBadge(true, name);
+    renderAll();
+  } else {
+    document.getElementById('auth-err').style.display = 'block';
+    document.getElementById('player-pw').value = '';
+    document.getElementById('player-pw').focus();
+  }
+}
+
+function enterViewMode() {
+  const name = document.getElementById('pname').value;
+  if (!name) return;
+  document.getElementById('player-auth-step').style.display = 'none';
+  editMode = false;
+  currentPlayer = name;
   localStorage.setItem('wc26_name', name);
+  showModeBadge(false, name);
+  renderAll();
+}
+
+function showModeBadge(isEdit, name) {
+  const wrap = document.getElementById('mode-badge-wrap');
+  const badge = document.getElementById('mode-badge');
+  wrap.style.display = 'block';
+  if (isEdit) {
+    badge.innerHTML = `<span class="edit-badge">✏️ Editing as ${name}</span>
+      <button onclick="logoutPlayer()" style="margin-left:8px;font-size:11px;color:#888;background:none;border:none;cursor:pointer;font-family:inherit">Change player</button>`;
+  } else {
+    badge.innerHTML = `<span class="view-badge">👁 Viewing ${name}'s predictions</span>
+      <button onclick="logoutPlayer()" style="margin-left:8px;font-size:11px;color:#888;background:none;border:none;cursor:pointer;font-family:inherit">Change player</button>`;
+  }
+}
+
+function logoutPlayer() {
+  editMode = false;
+  currentPlayer = '';
+  document.getElementById('pname').value = '';
+  document.getElementById('player-auth-step').style.display = 'none';
+  document.getElementById('mode-badge-wrap').style.display = 'none';
+  document.getElementById('matchlist').innerHTML = '';
+  preds = emptyPreds();
+  localStorage.removeItem('wc26_name');
+}
+
+function loadPlayer(name) {
   preds = emptyPreds();
   if (firebaseReady && allData[name] && allData[name].preds)
     applyFirebasePreds(allData[name].preds);
+}
+
+// Legacy onNameChange for Firebase listener
+function onNameChange() {
+  const name = currentPlayer;
+  if (!name) return;
+  loadPlayer(name);
   renderAll();
 }
 
 function renderAll() {
-  const name = document.getElementById('pname').value;
+  const name = currentPlayer;
   let html = '', curDate = '';
   MATCHES.forEach(m => {
     if (m.date!==curDate) { curDate=m.date; html+=`<div class="dayhdr">${m.date}</div>`; }
@@ -510,13 +645,14 @@ function renderAll() {
       ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
       : isFn ? `<div class="livebar final">✔ Final: <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>` : '';
 
-    // Save button — hidden if locked, shown otherwise
-    const saveBtn = !lk ? `
+    // Save button — only shown if locked=false AND user is in edit mode
+    const saveBtn = (!lk && editMode) ? `
       <div class="matchalert" id="ma-${m.id}"></div>
       <button class="msavebtn ${hasSaved?'done':''}" id="msave-${m.id}"
-        onclick="saveMatch(${m.id})" ${!name?'disabled':''}>
+        onclick="saveMatch(${m.id})">
         ${hasSaved ? '✓ Saved' : '💾 Save this prediction'}
-      </button>` : '';
+      </button>` : (!lk && !editMode && currentPlayer) ? `
+      <div style="font-size:11px;color:#888;margin-top:8px;font-style:italic">🔒 Enter your password to save predictions</div>` : '';
 
     html += `
     <div class="card${lk?' locked':''}" id="card-${m.id}">
@@ -574,8 +710,9 @@ function sp(id, field, val) {
 }
 
 async function saveMatch(id) {
-  const name = document.getElementById('pname').value;
+  const name = currentPlayer;
   if (!name) { showMatchAlert(id,'Please select your name first.','err'); return; }
+  if (!editMode) { showMatchAlert(id,'Enter your password first to save.','err'); return; }
 
   const p = preds[id];
   const m = MATCHES.find(x=>x.id===id);
@@ -631,7 +768,7 @@ setInterval(() => {
 
 // ─── SUMMARY ────────────────────────────────────────
 function renderSummary() {
-  const name = document.getElementById('pname').value;
+  const name = currentPlayer;
   document.getElementById('sumtitle').textContent = name ? name+"'s picks" : 'Your picks';
   const eL = {'90':'90 mins','ET':'Extra Time','PEN':'Penalties','':'?'};
   document.getElementById('sumcontent').innerHTML = MATCHES.map(m => {
@@ -641,7 +778,7 @@ function renderSummary() {
   }).join('');
 }
 function doCopy() {
-  const name = document.getElementById('pname').value||'Anonymous';
+  const name = currentPlayer || 'Anonymous';
   const eL = {'90':'90 mins','ET':'Extra Time','PEN':'Penalties','':'?'};
   let txt = `⚽ WC 2026 R32 — ${name}\n${'─'.repeat(36)}\n`;
   MATCHES.forEach(m => {
@@ -835,8 +972,18 @@ function showAdminMatchAlert(id,msg,type){
 }
 
 // ─── INIT ───────────────────────────────────────────
+// Restore last player in view-only mode (no auto-login for security)
 const savedName = localStorage.getItem('wc26_name');
-if (savedName) document.getElementById('pname').value = savedName;
+if (savedName) {
+  document.getElementById('pname').value = savedName;
+  // Show auth prompt so they can re-enter password or view only
+  if (savedName) {
+    currentPlayer = savedName;
+    loadPlayer(savedName);
+    // Show as view mode by default — they must re-auth to save
+    enterViewMode();
+  }
+}
 
 fetchScores().then(renderAll);
 
