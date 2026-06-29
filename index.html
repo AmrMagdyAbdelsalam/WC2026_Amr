@@ -2,13 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="WC 2026"/>
+<meta name="theme-color" content="#ffffff"/>
 <title>⚽ WC 2026 Predictions</title>
+
+<!-- App icon shown on iPhone home screen -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231a1a1a'/%3E%3Ctext x='90' y='120' font-size='90' text-anchor='middle'%3E⚽%3C/text%3E%3C/svg%3E"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
-.wrap{max-width:480px;margin:0 auto;padding-bottom:60px}
-.topbar{background:#fff;border-bottom:1px solid #e0ddd6;padding:14px 18px;position:sticky;top:0;z-index:99}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;min-height:-webkit-fill-available}
+.wrap{max-width:480px;margin:0 auto;padding-bottom:max(60px,env(safe-area-inset-bottom))}
+.topbar{background:#fff;border-bottom:1px solid #e0ddd6;padding:14px 18px;padding-top:max(14px,calc(env(safe-area-inset-top) + 8px));position:sticky;top:0;z-index:99}
 .topbar h1{font-size:16px;font-weight:700}
 .topbar p{font-size:11px;color:#888;margin-top:2px}
 .sync{display:flex;align-items:center;gap:6px;margin-top:6px}
@@ -172,8 +180,13 @@ table.apt tr:last-child td{border:none}
 <div class="wrap">
 
   <div class="topbar">
-    <h1>⚽ WC 2026 — Round of 32</h1>
-    <p>Knockout stage predictions · Jun 28 – Jul 4</p>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h1>⚽ WC 2026 — Round of 32</h1>
+        <p>Knockout stage predictions · Jun 28 – Jul 4</p>
+      </div>
+      <button onclick="refreshApp()" id="refresh-btn" style="background:none;border:1px solid #e0ddd6;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;color:#555;flex-shrink:0;margin-left:8px;margin-top:2px" title="Refresh">↻</button>
+    </div>
     <div class="sync">
       <div class="dot yellow" id="dot"></div>
       <span class="synctxt" id="synctxt">Connecting…</span>
@@ -1153,6 +1166,25 @@ function showAdminMatchAlert(id,msg,type){
   const el=document.getElementById('ama-'+id); if(!el) return;
   el.textContent=msg; el.className='matchalert '+type;
   clearTimeout(el._t); el._t=setTimeout(()=>{el.className='matchalert';},4000);
+}
+
+// ─── REFRESH ────────────────────────────────────────
+async function refreshApp() {
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  setSync('busy', 'Refreshing…');
+  await fetchScores();
+  renderAll();
+  const activeTab = document.querySelector('.page.active');
+  if (activeTab) {
+    const tabId = activeTab.id.replace('page-','');
+    if (tabId==='leaderboard') renderLB();
+    if (tabId==='allpicks')    renderAllPicks();
+    if (tabId==='summary')     renderSummary();
+  }
+  btn.textContent = '✓';
+  setTimeout(() => { btn.textContent='↻'; btn.disabled=false; }, 1500);
 }
 
 // ─── INIT ───────────────────────────────────────────
