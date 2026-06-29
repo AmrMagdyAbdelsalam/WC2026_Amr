@@ -31,9 +31,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .savebtn{padding:0 18px;height:42px;border-radius:8px;border:none;background:#16a34a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
 .savebtn:hover{background:#15803d}
 .savebtn:disabled{opacity:.5;cursor:not-allowed}
-.alert{font-size:13px;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:none;font-weight:500;line-height:1.5}
-.alert.ok{background:#dcfce7;color:#166534}
-.alert.err{background:#fee2e2;color:#7f1d1d}
+.alertbox{font-size:13px;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-weight:500;line-height:1.5;display:none}
+.alertbox.ok{background:#dcfce7;color:#166534;display:block}
+.alertbox.err{background:#fee2e2;color:#7f1d1d;display:block}
 .dayhdr{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin:14px 0 8px}
 .card{background:#fff;border:1px solid #e0ddd6;border-radius:12px;padding:14px 15px;margin-bottom:8px}
 .card.locked{background:#f9f9f7;opacity:.8}
@@ -72,12 +72,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ebtn.off{pointer-events:none;opacity:.35}
 .drawwarn{font-size:11px;color:#92400e;background:#fef3c7;border-radius:8px;padding:6px 8px;margin-top:8px;display:none;line-height:1.5}
 .lockmsg{font-size:11px;color:#888;margin-top:6px;display:none;font-weight:500}
-.sumwrap{background:#fff;border:1px solid #e0ddd6;border-radius:12px;overflow:hidden}
+.sumwrap{background:#fff;border:1px solid #e0ddd6;border-radius:12px;overflow:hidden;margin-bottom:10px}
 .sumhdr{padding:13px 16px;border-bottom:1px solid #e0ddd6;font-size:14px;font-weight:700}
 .sumrow{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:9px 16px;border-bottom:1px solid #e0ddd6;color:#555}
 .sumrow:last-child{border:none}
 .sumrow span:last-child{color:#1a1a1a;font-weight:600;text-align:right;max-width:55%}
-.copybtn{width:100%;margin-top:10px;padding:13px;border-radius:8px;border:1.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px}
+.copybtn{width:100%;padding:13px;border-radius:8px;border:1.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px}
 .copybtn:hover{background:#f5f5f0}
 .sharebox{background:#ede9fe;border:1px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:12px}
 .sharetitle{font-size:11px;font-weight:700;color:#4c1d95;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
@@ -158,7 +158,7 @@ table.lbt tr:last-child td{border:none}
       </select>
       <button class="savebtn" id="savebtn" onclick="savePreds()">💾 Save</button>
     </div>
-    <div class="alert" id="main-alert"></div>
+    <div class="alertbox" id="main-alert"></div>
     <div id="matchlist"></div>
   </div>
 
@@ -175,7 +175,7 @@ table.lbt tr:last-child td{border:none}
   <!-- LEADERBOARD -->
   <div id="page-leaderboard" class="page">
     <div style="height:12px"></div>
-    <div id="lbcontent"></div>
+    <div id="lbcontent"><div class="empty">Open this tab to load the leaderboard</div></div>
   </div>
 
   <!-- ADMIN -->
@@ -208,7 +208,7 @@ table.lbt tr:last-child td{border:none}
           <button class="adminsavebtn" id="adminsavebtn" onclick="saveAdmin()">
             💾 Save all changes
           </button>
-          <div class="alert" id="admin-alert" style="margin-top:10px"></div>
+          <div class="alertbox" id="admin-alert" style="margin-top:10px"></div>
         </div>
       </div>
     </div>
@@ -216,14 +216,12 @@ table.lbt tr:last-child td{border:none}
 
 </div>
 
-<!-- Firebase Realtime Database SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <script>
-// ═══════════════════════════════════════════
-// FIREBASE INIT — Realtime Database
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
+// FIREBASE
+// ═══════════════════════════════
 firebase.initializeApp({
   apiKey: "AIzaSyDBVvzhx5KzktWcj-Tzg5TUrgaaQawRy00",
   authDomain: "wc2026-c7709.firebaseapp.com",
@@ -235,9 +233,9 @@ firebase.initializeApp({
 });
 const db = firebase.database();
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // CONSTANTS
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 const PLAYERS = ['Aly','Assal','Hindy','Magdy','Nashaat','Zeyad'];
 const AVATARS = [
   {bg:'#ede9fe',c:'#4c1d95'},{bg:'#dcfce7',c:'#166534'},
@@ -263,157 +261,179 @@ const MATCHES = [
   {id:16, date:'Fri Jul 3',  home:'Colombia',      away:'Ghana',          hA:'COL', aA:'GHA', ko:Date.UTC(2026,6,4,1,30)},
 ];
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // STATE
-// ═══════════════════════════════════════════
-let preds = {};
-MATCHES.forEach(m => { preds[m.id] = {hs:'',as:'',q:'',e:'90'}; });
+// ═══════════════════════════════
+function emptyPreds() {
+  const p = {};
+  MATCHES.forEach(m => { p[m.id] = {hs:'', as:'', q:'', e:'90'}; });
+  return p;
+}
+let preds = emptyPreds();
 let adminPlayer = null;
-let adminPreds  = {};
-let liveScores  = {};
-let allData     = {}; // live cache of all predictions from Firebase
+let adminPreds = emptyPreds();
+let liveScores = {};
+let allData = {};
+let firebaseReady = false;
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // SYNC STATUS
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 function setSync(state, msg) {
   document.getElementById('dot').className = 'dot' + (state==='ok'?'':state==='busy'?' yellow':' red');
   document.getElementById('synctxt').textContent = msg;
 }
 
-// ═══════════════════════════════════════════
-// FIREBASE REALTIME DB HELPERS
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
+// FIREBASE HELPERS
+// ═══════════════════════════════
 function fbSave(name, data) {
   return db.ref('predictions/' + name).set(data);
 }
-function fbLoad(name) {
-  return db.ref('predictions/' + name).get().then(snap => snap.exists() ? snap.val() : null);
+function fbLoadAll() {
+  return db.ref('predictions').get().then(snap => snap.exists() ? snap.val() : {});
 }
 
-// Listen to ALL predictions in real time — updates leaderboard instantly on all devices
+// Real-time listener — fires immediately on connect and on every change
 db.ref('predictions').on('value', snap => {
   allData = snap.val() || {};
+  firebaseReady = true;
   setSync('ok', '✓ Connected — real-time sync active');
 
-  // If a player is already selected, reload their predictions from fresh data
-  const currentName = document.getElementById('pname').value;
-  if (currentName && allData[currentName]) {
-    const d = allData[currentName];
-    if (d && d.preds) {
-      MATCHES.forEach(m => {
-        if (d.preds[m.id]) preds[m.id] = Object.assign({hs:'',as:'',q:'',e:'90'}, d.preds[m.id]);
-      });
-      renderAll();
-    }
+  // Reload current player's predictions if one is selected
+  const name = document.getElementById('pname').value;
+  if (name && allData[name] && allData[name].preds) {
+    loadPredsFromData(allData[name].preds);
+    renderAll();
   }
 
+  // Refresh leaderboard if open
   if (document.getElementById('page-leaderboard').classList.contains('active')) {
-    renderLBFromCache();
+    renderLB();
   }
 });
 
-// ═══════════════════════════════════════════
+function loadPredsFromData(savedPreds) {
+  // Only load — don't overwrite fields user is actively editing
+  MATCHES.forEach(m => {
+    if (savedPreds[m.id]) {
+      preds[m.id] = {
+        hs: savedPreds[m.id].hs || '',
+        as: savedPreds[m.id].as || '',
+        q:  savedPreds[m.id].q  || '',
+        e:  savedPreds[m.id].e  || '90'
+      };
+    }
+  });
+}
+
+// ═══════════════════════════════
 // LIVE SCORES
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 async function fetchScores() {
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6', max_tokens: 800,
-        system: 'Return ONLY raw JSON no markdown. Format: {"matches":[{"id":1,"homeScore":0,"awayScore":0,"status":"scheduled","winner":null}]}. status: scheduled|in_progress|final. winner: home abbr or away abbr or null.',
-        messages: [{ role: 'user', content: 'WC2026 R32 scores today Jun 28 2026: 1=RSA vs CAN(19UTC),2=BRA vs JPN(Jun29 17UTC),3=GER vs PAR(Jun29 20:30UTC),4=NED vs MAR(Jun30 1UTC),5=CIV vs NOR(Jun30 17UTC),6=FRA vs SWE(Jun30 21UTC),7=MEX vs ECU(Jul1 1UTC),8=ENG vs COD(Jul1 16UTC),9=BEL vs SEN(Jul1 20UTC),10=USA vs BIH(Jul2 0UTC),11=ESP vs AUT(Jul2 19UTC),12=POR vs CRO(Jul2 23UTC),13=SUI vs DZA(Jul3 3UTC),14=AUS vs EGY(Jul3 18UTC),15=ARG vs CPV(Jul3 23UTC),16=COL vs GHA(Jul4 1:30UTC). JSON only.' }]
+        model:'claude-sonnet-4-6', max_tokens:800,
+        system:'Return ONLY raw JSON no markdown. Format: {"matches":[{"id":1,"homeScore":0,"awayScore":0,"status":"scheduled","winner":null}]}. status: scheduled|in_progress|final. winner: home abbr or away abbr or null.',
+        messages:[{role:'user', content:'WC2026 R32 scores today Jun 28 2026: 1=RSA vs CAN(19UTC),2=BRA vs JPN(Jun29 17UTC),3=GER vs PAR(Jun29 20:30UTC),4=NED vs MAR(Jun30 1UTC),5=CIV vs NOR(Jun30 17UTC),6=FRA vs SWE(Jun30 21UTC),7=MEX vs ECU(Jul1 1UTC),8=ENG vs COD(Jul1 16UTC),9=BEL vs SEN(Jul1 20UTC),10=USA vs BIH(Jul2 0UTC),11=ESP vs AUT(Jul2 19UTC),12=POR vs CRO(Jul2 23UTC),13=SUI vs DZA(Jul3 3UTC),14=AUS vs EGY(Jul3 18UTC),15=ARG vs CPV(Jul3 23UTC),16=COL vs GHA(Jul4 1:30UTC). JSON only.'}]
       })
     });
     const d = await r.json();
-    const txt = d.content.map(c => c.text||'').join('').replace(/```json|```/g,'').trim();
+    const txt = d.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
     const p = JSON.parse(txt);
     if (p.matches) p.matches.forEach(m => { liveScores[m.id] = m; });
   } catch(e) {}
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // HELPERS
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 function isLocked(m) { return Date.now() >= m.ko - 60000; }
 function koLabel(m) {
   const d = new Date(m.ko + 3*3600000), h = d.getUTCHours(), mi = d.getUTCMinutes();
   return `${h%12||12}${mi?':'+String(mi).padStart(2,'0'):''}${h<12?'am':'pm'} Cairo`;
 }
 function untilLabel(m) {
-  const diff = m.ko-60000-Date.now(); if(diff<=0) return null;
-  const tm = Math.floor(diff/60000); if(tm<60) return `locks in ${tm}m`;
-  const h = Math.floor(tm/60), mn = tm%60; if(h<24) return `locks in ${h}h${mn?` ${mn}m`:''}`;
+  const diff = m.ko - 60000 - Date.now(); if (diff<=0) return null;
+  const tm = Math.floor(diff/60000); if (tm<60) return `locks in ${tm}m`;
+  const h = Math.floor(tm/60), mn = tm%60; if (h<24) return `locks in ${h}h${mn?` ${mn}m`:''}`;
   return `locks in ${Math.floor(h/24)}d`;
 }
-function isDraw(id) { const p=preds[id]; return p.hs!==''&&p.as!==''&&p.hs===p.as; }
+function isDraw(id) {
+  const p = preds[id]; return p.hs!=='' && p.as!=='' && p.hs===p.as;
+}
 function calcPts(pred, live, m) {
   if (!pred) pred = {};
-  if (!live||live.status==='scheduled')
-    return {pts:(pred.q?2:0)+(pred.e?1:0),qOk:false,sOk:false,eOk:false,pend:true};
+  if (!live || live.status==='scheduled')
+    return {pts:(pred.q?2:0)+(pred.e?1:0), qOk:false, sOk:false, eOk:false, pend:true};
   const part = live.status==='in_progress';
-  let pts=0,qOk=false,sOk=false,eOk=false;
-  if (!part&&live.winner&&pred.q&&m) {
-    if ((pred.q===m.home&&live.winner===m.hA)||(pred.q===m.away&&live.winner===m.aA))
-      { qOk=true; pts+=2; }
-  } else if (part&&pred.q) pts+=2;
-  if (!part&&live.homeScore!=null&&live.awayScore!=null&&pred.hs!==''&&pred.as!=='') {
-    if (parseInt(pred.hs)===live.homeScore&&parseInt(pred.as)===live.awayScore) { sOk=true; pts+=3; }
+  let pts=0, qOk=false, sOk=false, eOk=false;
+  if (!part && live.winner && pred.q && m) {
+    if ((pred.q===m.home&&live.winner===m.hA)||(pred.q===m.away&&live.winner===m.aA)) { qOk=true; pts+=2; }
+  } else if (part && pred.q) pts+=2;
+  if (!part && live.homeScore!=null && live.awayScore!=null && pred.hs!=='' && pred.as!=='') {
+    if (parseInt(pred.hs)===live.homeScore && parseInt(pred.as)===live.awayScore) { sOk=true; pts+=3; }
   }
-  if (!part&&live.winner&&pred.e&&m) {
-    const dr=live.homeScore===live.awayScore;
-    if (dr){if(pred.e==='ET'||pred.e==='PEN'){eOk=true;pts+=1;}}
-    else{if(pred.e==='90'){eOk=true;pts+=1;}}
-  } else if (part&&pred.e) pts+=1;
-  return {pts,qOk,sOk,eOk,part,pend:false};
+  if (!part && live.winner && pred.e && m) {
+    const dr = live.homeScore===live.awayScore;
+    if (dr) { if(pred.e==='ET'||pred.e==='PEN'){eOk=true;pts+=1;} }
+    else    { if(pred.e==='90'){eOk=true;pts+=1;} }
+  } else if (part && pred.e) pts+=1;
+  return {pts, qOk, sOk, eOk, part, pend:false};
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // TABS
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 function showTab(t) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach((tb,i) =>
     tb.classList.toggle('active', ['predict','summary','leaderboard','admin'][i]===t));
   document.getElementById('page-'+t).classList.add('active');
-  if (t==='summary') renderSummary();
-  if (t==='leaderboard') renderLBFromCache();
+  if (t==='summary')     renderSummary();
+  if (t==='leaderboard') renderLB();
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // PREDICT TAB
-// ═══════════════════════════════════════════
-async function onNameChange() {
-  const name = document.getElementById('pname').value; if(!name) return;
+// ═══════════════════════════════
+function onNameChange() {
+  const name = document.getElementById('pname').value;
+  if (!name) return;
   localStorage.setItem('wc26_name', name);
-  MATCHES.forEach(m => { preds[m.id]={hs:'',as:'',q:'',e:'90'}; });
-  // Load from live cache first, fallback to direct fetch
-  const d = allData[name] || await fbLoad(name).catch(()=>null);
-  if (d && d.preds) {
-    MATCHES.forEach(m => {
-      if (d.preds[m.id]) preds[m.id] = Object.assign({hs:'',as:'',q:'',e:'90'}, d.preds[m.id]);
-    });
+  preds = emptyPreds();
+  // Load from allData if already fetched, otherwise wait for listener
+  if (firebaseReady && allData[name] && allData[name].preds) {
+    loadPredsFromData(allData[name].preds);
   }
   renderAll();
 }
 
 function renderAll() {
-  let html='', curDate='';
+  let html = '', curDate = '';
   MATCHES.forEach(m => {
-    if (m.date!==curDate) { curDate=m.date; html+=`<div class="dayhdr">${m.date}</div>`; }
-    const p=preds[m.id], lk=isLocked(m), u=untilLabel(m);
-    const soon=!lk&&u&&u.includes('m')&&!u.includes('h');
-    const lv=liveScores[m.id], isLv=lv&&lv.status==='in_progress', isFn=lv&&lv.status==='final';
-    const off=lk?'off':'';
-    const lkbadge=lk?`<span class="lkbadge locked">🔒 Locked</span>`
-      :soon?`<span class="lkbadge soon">⏰ ${u}</span>`
-      :`<span class="lkbadge open">${u||'Open'}</span>`;
-    const livebar=isLv
-      ?`<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
-      :isFn?`<div class="livebar final">✔ Final: <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`:'';
-    html+=`
+    if (m.date !== curDate) { curDate=m.date; html+=`<div class="dayhdr">${m.date}</div>`; }
+    const p   = preds[m.id];
+    const lk  = isLocked(m);
+    const u   = untilLabel(m);
+    const soon = !lk && u && u.includes('m') && !u.includes('h');
+    const lv  = liveScores[m.id];
+    const isLv = lv && lv.status==='in_progress';
+    const isFn = lv && lv.status==='final';
+    const off  = lk ? 'off' : '';
+
+    const lkbadge = lk
+      ? `<span class="lkbadge locked">🔒 Locked</span>`
+      : soon ? `<span class="lkbadge soon">⏰ ${u}</span>`
+      : `<span class="lkbadge open">${u||'Open'}</span>`;
+
+    const livebar = isLv
+      ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
+      : isFn ? `<div class="livebar final">✔ Final: <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>` : '';
+
+    html += `
     <div class="card${lk?' locked':''}" id="card-${m.id}">
       <div class="ctop">
         <div><div class="cmeta">Match ${m.id}</div><div class="cko">${koLabel(m)}</div></div>
@@ -446,8 +466,8 @@ function renderAll() {
         <div class="ebtn ${p.e==='PEN'?'on':''} ${off}" data-v="PEN"
           onclick="sp(${m.id},'e',this.dataset.v)">Penalties</div>
       </div>
-      <div class="drawwarn" id="dw-${m.id}">⚠️ Draw predicted — pick Extra Time or Penalties and still choose who qualifies.</div>
-      <div class="lockmsg" id="lm-${m.id}" style="${lk?'display:block':''}">🔒 Predictions locked for this match.</div>
+      <div class="drawwarn" id="dw-${m.id}">⚠️ Draw predicted — pick Extra Time or Penalties, and still choose who qualifies.</div>
+      <div class="lockmsg" id="lm-${m.id}" ${lk?'style="display:block"':''}>🔒 Predictions locked for this match.</div>
     </div>`;
   });
   document.getElementById('matchlist').innerHTML = html;
@@ -456,124 +476,142 @@ function renderAll() {
 
 function sp(id, field, val) {
   if (isLocked(MATCHES.find(m=>m.id===id))) return;
-  preds[id][field]=val;
-  const draw=isDraw(id);
-  const dw=document.getElementById('dw-'+id); if(dw) dw.style.display=draw?'block':'none';
-  if (draw&&preds[id].e==='90') preds[id].e='';
-  document.querySelectorAll(`#q-${id} .qbtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===preds[id].q));
-  document.querySelectorAll(`#e-${id} .ebtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===preds[id].e));
+  preds[id][field] = val;
+  const draw = isDraw(id);
+  const dw = document.getElementById('dw-'+id); if(dw) dw.style.display = draw?'block':'none';
+  if (draw && preds[id].e==='90') preds[id].e = '';
+  document.querySelectorAll(`#q-${id} .qbtn`).forEach(b => b.classList.toggle('on', b.dataset.v===preds[id].q));
+  document.querySelectorAll(`#e-${id} .ebtn`).forEach(b => b.classList.toggle('on', b.dataset.v===preds[id].e));
   updPts(id);
 }
 
 function updPts(id) {
-  const pb=document.getElementById('pts-'+id); if(!pb) return;
-  const p=preds[id], lv=liveScores[id], m=MATCHES.find(x=>x.id===id);
-  if (lv&&lv.status!=='scheduled') {
-    const r=calcPts(p,lv,m); pb.textContent=r.pts+' pts'+(r.part?' (live)':'');
+  const pb = document.getElementById('pts-'+id); if(!pb) return;
+  const p = preds[id], lv = liveScores[id], m = MATCHES.find(x=>x.id===id);
+  if (lv && lv.status!=='scheduled') {
+    const r = calcPts(p,lv,m); pb.textContent = r.pts+' pts'+(r.part?' (live)':'');
   } else {
-    pb.textContent=((p.q?2:0)+(p.e?1:0))+' pts';
+    pb.textContent = ((p.q?2:0)+(p.e?1:0))+' pts';
   }
 }
 
-setInterval(()=>{
-  MATCHES.forEach(m=>{
-    const card=document.getElementById('card-'+m.id); if(!card) return;
-    const lk=isLocked(m); card.classList.toggle('locked',lk);
-    const lmEl=document.getElementById('lm-'+m.id); if(lmEl) lmEl.style.display=lk?'block':'none';
-    card.querySelectorAll('.si').forEach(el=>el.disabled=lk);
-    card.querySelectorAll('.qbtn,.ebtn').forEach(el=>{if(lk)el.classList.add('off');});
-    const badge=card.querySelector('.lkbadge'); if(badge){
-      const u=untilLabel(m),s=!lk&&u&&u.includes('m')&&!u.includes('h');
-      if(lk){badge.className='lkbadge locked';badge.textContent='🔒 Locked';}
-      else if(s){badge.className='lkbadge soon';badge.textContent='⏰ '+u;}
-      else{badge.className='lkbadge open';badge.textContent=u||'Open';}
+// Auto-lock check every 30s
+setInterval(() => {
+  MATCHES.forEach(m => {
+    const card = document.getElementById('card-'+m.id); if(!card) return;
+    const lk = isLocked(m); card.classList.toggle('locked', lk);
+    const lmEl = document.getElementById('lm-'+m.id); if(lmEl) lmEl.style.display = lk?'block':'none';
+    card.querySelectorAll('.si').forEach(el => el.disabled=lk);
+    card.querySelectorAll('.qbtn,.ebtn').forEach(el => { if(lk) el.classList.add('off'); });
+    const badge = card.querySelector('.lkbadge'); if(badge){
+      const u=untilLabel(m), s=!lk&&u&&u.includes('m')&&!u.includes('h');
+      if(lk)      {badge.className='lkbadge locked';badge.textContent='🔒 Locked';}
+      else if(s)  {badge.className='lkbadge soon';  badge.textContent='⏰ '+u;}
+      else        {badge.className='lkbadge open';   badge.textContent=u||'Open';}
     }
     updPts(m.id);
   });
-},30000);
+}, 30000);
 
 async function savePreds() {
-  const name=document.getElementById('pname').value;
-  if(!name){showAlert('main-alert','Please select your name first.',false);return;}
-  const errs=[];
-  MATCHES.forEach(m=>{
-    if(isLocked(m))return;
-    const p=preds[m.id];
-    if(isDraw(m.id)&&p.e==='90')errs.push(`Match ${m.id}: draw needs ET or Penalties`);
-    if(!p.q)errs.push(`Match ${m.id}: select who qualifies`);
-  });
-  if(errs.length){showAlert('main-alert',errs[0],false);return;}
-  const btn=document.getElementById('savebtn');
-  btn.disabled=true; btn.textContent='Saving…';
-  setSync('busy','Saving…');
-  try {
-    await fbSave(name,{name,preds:JSON.parse(JSON.stringify(preds)),t:Date.now()});
-    setSync('ok','✓ Saved — visible to everyone instantly');
-    showAlert('main-alert','✓ Saved! Your friends can see it on the leaderboard now.',true);
-  } catch(e) {
-    setSync('red','Save failed');
-    showAlert('main-alert','Save failed: '+e.message,false);
-  }
-  btn.disabled=false; btn.textContent='💾 Save';
-}
+  const name = document.getElementById('pname').value;
+  if (!name) { showAlert('main-alert','Please select your name first.','err'); return; }
 
-function showAlert(id,msg,ok){
-  const el=document.getElementById(id);
-  el.textContent=msg; el.className='alert '+(ok?'ok':'err'); el.style.display='block';
-  setTimeout(()=>el.style.display='none',5000);
-}
+  // Validate ALL matches that aren't locked
+  const errs = [];
+  MATCHES.forEach(m => {
+    if (isLocked(m)) return; // skip locked matches
+    const p = preds[m.id];
+    if (!p.q) errs.push(`Match ${m.id} (${m.home} vs ${m.away}): select who qualifies`);
+    if (isDraw(m.id) && p.e==='90') errs.push(`Match ${m.id}: draw predicted — pick Extra Time or Penalties`);
+  });
 
-// ═══════════════════════════════════════════
-// SUMMARY
-// ═══════════════════════════════════════════
-function renderSummary(){
-  const name=document.getElementById('pname').value;
-  document.getElementById('sumtitle').textContent=name?name+"'s picks":'Your picks';
-  const eL={'90':'90 mins','ET':'Extra Time','PEN':'Penalties','':'?'};
-  document.getElementById('sumcontent').innerHTML=MATCHES.map(m=>{
-    const p=preds[m.id];
-    const sc=(p.hs!==''&&p.as!=='')?`${p.hs}–${p.as}`:'?–?';
-    return `<div class="sumrow"><span>${m.home} vs ${m.away}</span><span>${sc} · ${p.q||'?'} · ${eL[p.e]||'?'}</span></div>`;
-  }).join('');
-}
-function doCopy(){
-  const name=document.getElementById('pname').value||'Anonymous';
-  const eL={'90':'90 mins','ET':'Extra Time','PEN':'Penalties','':'?'};
-  let txt=`⚽ WC 2026 R32 Predictions — ${name}\n${'─'.repeat(38)}\n`;
-  MATCHES.forEach(m=>{
-    const p=preds[m.id];
-    const sc=(p.hs!==''&&p.as!=='')?`${p.hs}–${p.as}`:'?–?';
-    txt+=`${m.home} vs ${m.away}: ${sc} | ${p.q||'?'} qualifies | ${eL[p.e]||'?'}\n`;
-  });
-  navigator.clipboard.writeText(txt).then(()=>{
-    const b=document.querySelector('.copybtn'); b.textContent='✓ Copied!';
-    setTimeout(()=>b.textContent='📋 Copy as text to share',2000);
-  });
-}
-
-// ═══════════════════════════════════════════
-// LEADERBOARD — uses real-time cache
-// ═══════════════════════════════════════════
-function renderLBFromCache(){
-  const el=document.getElementById('lbcontent');
-  const entries=[];
-  PLAYERS.forEach(name=>{
-    const d=allData[name]; if(!d) return;
-    let tot=0,qp=0,sp=0,ep=0,pend=0;
-    MATCHES.forEach(m=>{
-      const r=calcPts((d.preds||{})[m.id],liveScores[m.id],m);
-      tot+=r.pts; if(r.pend)pend++; if(r.qOk)qp+=2; if(r.sOk)sp+=3; if(r.eOk)ep+=1;
-    });
-    entries.push({name,tot,qp,sp,ep,pend});
-  });
-  if(!entries.length){
-    el.innerHTML='<div class="empty">🏆<br><br>No predictions saved yet.<br>Be the first to fill yours in!</div>';
+  if (errs.length) {
+    showAlert('main-alert', '⚠️ ' + errs[0] + ` (${errs.length} issue${errs.length>1?'s':''} total)`, 'err');
     return;
   }
-  entries.sort((a,b)=>b.tot-a.tot);
-  const medals=['🥇','🥈','🥉'];
-  const url=location.href;
-  let h=`
+
+  const btn = document.getElementById('savebtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  setSync('busy','Saving…');
+  try {
+    const payload = { name, preds: JSON.parse(JSON.stringify(preds)), t: Date.now() };
+    await fbSave(name, payload);
+    setSync('ok','✓ Saved — visible to everyone');
+    showAlert('main-alert','✓ Saved! Your predictions are now live for everyone to see.','ok');
+  } catch(e) {
+    setSync('red','Save failed');
+    showAlert('main-alert','Save failed: '+e.message,'err');
+  }
+  btn.disabled = false; btn.textContent = '💾 Save';
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'alertbox ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className='alertbox'; }, 6000);
+}
+
+// ═══════════════════════════════
+// SUMMARY
+// ═══════════════════════════════
+function renderSummary() {
+  const name = document.getElementById('pname').value;
+  document.getElementById('sumtitle').textContent = name ? name+"'s picks" : 'Your picks';
+  const eL = {'90':'90 mins','ET':'Extra Time','PEN':'Penalties','':'?'};
+  document.getElementById('sumcontent').innerHTML = MATCHES.map(m => {
+    const p = preds[m.id];
+    const sc = (p.hs!==''&&p.as!=='') ? `${p.hs}–${p.as}` : '?–?';
+    const q  = p.q || '?';
+    const e  = eL[p.e] || '?';
+    return `<div class="sumrow"><span>${m.home} vs ${m.away}</span><span>${sc} · ${q} · ${e}</span></div>`;
+  }).join('');
+}
+
+function doCopy() {
+  const name = document.getElementById('pname').value || 'Anonymous';
+  const eL = {'90':'90 mins','ET':'Extra Time','PEN':'Penalties','':'?'};
+  let txt = `⚽ WC 2026 R32 Predictions — ${name}\n${'─'.repeat(38)}\n`;
+  MATCHES.forEach(m => {
+    const p = preds[m.id];
+    const sc = (p.hs!==''&&p.as!=='') ? `${p.hs}–${p.as}` : '?–?';
+    txt += `${m.home} vs ${m.away}: ${sc} | ${p.q||'?'} qualifies | ${eL[p.e]||'?'}\n`;
+  });
+  navigator.clipboard.writeText(txt).then(() => {
+    const b = document.querySelector('.copybtn');
+    b.textContent = '✓ Copied!';
+    setTimeout(() => b.textContent='📋 Copy as text to share', 2000);
+  });
+}
+
+// ═══════════════════════════════
+// LEADERBOARD
+// ═══════════════════════════════
+function renderLB() {
+  const el = document.getElementById('lbcontent');
+  const entries = [];
+  PLAYERS.forEach(name => {
+    const d = allData[name]; if(!d) return;
+    let tot=0, qp=0, sp=0, ep=0, pend=0;
+    MATCHES.forEach(m => {
+      const r = calcPts((d.preds||{})[m.id], liveScores[m.id], m);
+      tot+=r.pts; if(r.pend)pend++; if(r.qOk)qp+=2; if(r.sOk)sp+=3; if(r.eOk)ep+=1;
+    });
+    entries.push({name, tot, qp, sp, ep, pend});
+  });
+
+  if (!entries.length) {
+    el.innerHTML = '<div class="empty">🏆<br><br>No predictions saved yet.<br>Be the first to fill yours in!</div>';
+    return;
+  }
+
+  entries.sort((a,b) => b.tot - a.tot);
+  const medals = ['🥇','🥈','🥉'];
+  const url = location.href;
+
+  let h = `
   <div class="sharebox">
     <div class="sharetitle">📤 Share app with your friends</div>
     <div class="shareurl" id="shareurl" onclick="copyUrl()">${url}</div>
@@ -582,15 +620,16 @@ function renderLBFromCache(){
   <div class="lbwrap">
     <div class="lbhdr">
       <span class="lbtitle">🏆 Live Leaderboard</span>
-      <button class="lbref" onclick="renderLBFromCache()">↻ Refresh</button>
+      <button class="lbref" onclick="renderLB()">↻ Refresh</button>
     </div>
     <table class="lbt">
       <thead><tr><th>#</th><th>Player</th><th>Pts</th><th>Breakdown</th></tr></thead>
       <tbody>`;
-  entries.forEach((e,i)=>{
-    const ci=PLAYERS.indexOf(e.name), av=AVATARS[ci]||AVATARS[0];
-    const rank=i<3?`<span style="font-size:${22-i*2}px">${medals[i]}</span>`:`<b>${i+1}</b>`;
-    h+=`<tr>
+
+  entries.forEach((e,i) => {
+    const ci = PLAYERS.indexOf(e.name), av = AVATARS[ci]||AVATARS[0];
+    const rank = i<3 ? `<span style="font-size:${22-i*2}px">${medals[i]}</span>` : `<b>${i+1}</b>`;
+    h += `<tr>
       <td>${rank}</td>
       <td><div class="lbname">
         <span class="av" style="background:${av.bg};color:${av.c}">${e.name.slice(0,2).toUpperCase()}</span>
@@ -605,57 +644,54 @@ function renderLBFromCache(){
       </td>
     </tr>`;
   });
-  h+=`</tbody></table></div>
-  <p class="lbnote">
-    🔴 Live via Firebase — updates instantly on all devices<br>
-    q=qualifier · s=correct score · e=ending method
-  </p>`;
-  el.innerHTML=h;
+
+  h += `</tbody></table></div>
+  <p class="lbnote">🔴 Live via Firebase — updates instantly on all devices<br>q=qualifier · s=score · e=ending method</p>`;
+  el.innerHTML = h;
 }
 
-function copyUrl(){
-  navigator.clipboard.writeText(location.href).then(()=>{
-    const el=document.getElementById('shareurl');
-    if(el){el.textContent='✓ Copied!';setTimeout(()=>el.textContent=location.href,2000);}
+function copyUrl() {
+  navigator.clipboard.writeText(location.href).then(() => {
+    const el = document.getElementById('shareurl');
+    if(el){el.textContent='✓ Copied!'; setTimeout(()=>el.textContent=location.href,2000);}
   });
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // ADMIN
-// ═══════════════════════════════════════════
-function checkPw(){
-  if(document.getElementById('adminpw').value==='Voda8080'){
-    document.getElementById('admin-login').style.display='none';
-    document.getElementById('admin-panel').style.display='block';
-    document.getElementById('pbrow').innerHTML=
+// ═══════════════════════════════
+function checkPw() {
+  if (document.getElementById('adminpw').value === 'Voda8080') {
+    document.getElementById('admin-login').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    document.getElementById('pbrow').innerHTML =
       PLAYERS.map(n=>`<div class="pb" id="pb-${n}" onclick="selAdmin('${n}')">${n}</div>`).join('');
-  }else{
-    document.getElementById('pwerr').style.display='block';
-    document.getElementById('adminpw').value='';
+  } else {
+    document.getElementById('pwerr').style.display = 'block';
+    document.getElementById('adminpw').value = '';
   }
 }
 
-async function selAdmin(name){
-  adminPlayer=name;
-  PLAYERS.forEach(n=>{const b=document.getElementById('pb-'+n);if(b)b.classList.toggle('on',n===name);});
-  document.getElementById('adminname').textContent=name;
-  adminPreds={};
-  MATCHES.forEach(m=>{adminPreds[m.id]={hs:'',as:'',q:'',e:'90'};});
-  const d=allData[name]||await fbLoad(name).catch(()=>null);
-  if(d&&d.preds){
-    MATCHES.forEach(m=>{
-      if(d.preds[m.id]) adminPreds[m.id]=Object.assign({hs:'',as:'',q:'',e:'90'},d.preds[m.id]);
+function selAdmin(name) {
+  adminPlayer = name;
+  PLAYERS.forEach(n => { const b=document.getElementById('pb-'+n); if(b) b.classList.toggle('on',n===name); });
+  document.getElementById('adminname').textContent = name;
+  adminPreds = emptyPreds();
+  if (allData[name] && allData[name].preds) {
+    MATCHES.forEach(m => {
+      if (allData[name].preds[m.id])
+        adminPreds[m.id] = Object.assign({hs:'',as:'',q:'',e:'90'}, allData[name].preds[m.id]);
     });
   }
-  document.getElementById('admineditor').style.display='block';
+  document.getElementById('admineditor').style.display = 'block';
   renderAdminCards();
 }
 
-function renderAdminCards(){
-  let html='';
-  MATCHES.forEach(m=>{
-    const p=adminPreds[m.id];
-    html+=`<div class="amc">
+function renderAdminCards() {
+  let html = '';
+  MATCHES.forEach(m => {
+    const p = adminPreds[m.id];
+    html += `<div class="amc">
       <div class="amct">Match ${m.id} · ${m.home} vs ${m.away}</div>
       <div class="scrow" style="margin-bottom:10px">
         <input class="si" type="number" min="0" max="20" placeholder="0"
@@ -677,10 +713,10 @@ function renderAdminCards(){
       </div>
     </div>`;
   });
-  document.getElementById('admincards').innerHTML=html;
+  document.getElementById('admincards').innerHTML = html;
 }
 
-function ap(id,field,val){adminPreds[id][field]=val;}
+function ap(id,field,val){ adminPreds[id][field]=val; }
 function aqf(id,el){
   adminPreds[id].q=el.dataset.v;
   document.querySelectorAll(`#aq-${id} .qbtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===el.dataset.v));
@@ -690,47 +726,34 @@ function aef(id,el){
   document.querySelectorAll(`#ae-${id} .ebtn`).forEach(b=>b.classList.toggle('on',b.dataset.v===el.dataset.v));
 }
 
-async function saveAdmin(){
-  if(!adminPlayer){showAlert('admin-alert','Select a player first.',false);return;}
-  const btn=document.getElementById('adminsavebtn');
+async function saveAdmin() {
+  if (!adminPlayer) { showAlert('admin-alert','Select a player first.','err'); return; }
+  const btn = document.getElementById('adminsavebtn');
   btn.disabled=true; btn.textContent='Saving…';
-  try{
-    await fbSave(adminPlayer,{name:adminPlayer,preds:JSON.parse(JSON.stringify(adminPreds)),t:Date.now()});
-    showAlert('admin-alert',`✓ Saved for ${adminPlayer} — visible to all devices now`,true);
-  }catch(e){
-    showAlert('admin-alert','Save failed: '+e.message,false);
+  try {
+    await fbSave(adminPlayer, {name:adminPlayer, preds:JSON.parse(JSON.stringify(adminPreds)), t:Date.now()});
+    showAlert('admin-alert',`✓ Saved for ${adminPlayer} — visible to all devices now`,'ok');
+  } catch(e) {
+    showAlert('admin-alert','Save failed: '+e.message,'err');
   }
   btn.disabled=false; btn.textContent='💾 Save all changes';
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════
 // INIT
-// ═══════════════════════════════════════════
-// Save name to localStorage on change, restore on load
+// ═══════════════════════════════
+// Restore last selected name
 const savedName = localStorage.getItem('wc26_name');
 if (savedName) {
-  const sel = document.getElementById('pname');
-  sel.value = savedName;
+  document.getElementById('pname').value = savedName;
+  // preds will be loaded when Firebase listener fires
 }
 
 fetchScores().then(renderAll);
-
-// After Firebase data loads, auto-restore saved player's predictions
-db.ref('predictions').once('value').then(snap => {
-  allData = snap.val() || {};
-  const name = document.getElementById('pname').value;
-  if (name && allData[name] && allData[name].preds) {
-    MATCHES.forEach(m => {
-      if (allData[name].preds[m.id])
-        preds[m.id] = Object.assign({hs:'',as:'',q:'',e:'90'}, allData[name].preds[m.id]);
-    });
-    renderAll();
-  }
-});
-setInterval(async()=>{
+setInterval(async () => {
   await fetchScores(); renderAll();
-  if(document.getElementById('page-leaderboard').classList.contains('active')) renderLBFromCache();
-},120000);
+  if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
+}, 120000);
 </script>
 </body>
 </html>
