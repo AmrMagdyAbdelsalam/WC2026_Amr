@@ -445,106 +445,204 @@ function applyFirebasePreds(savedPreds) {
 }
 
 // ─── LIVE SCORES ────────────────────────────────────
-// Uses openfootball/worldcup.json — free, no API key, auto-updates after each match
-// URL: https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json
-// Data format: match has score.ft=[homeGoals, awayGoals] when finished, no score field if upcoming
+// Primary:  football-data.org (free API key, CORS-open, live scores)
+// Fallback: openfootball GitHub JSON (updates ~1hr after match)
+// Last resort: hardcoded confirmed results
 
-// Maps our 16 R32 matches to the openfootball team name pairs
-const MATCH_TEAMS = {
-  1:  ['South Africa', 'Canada'],
-  2:  ['Brazil',       'Japan'],
-  3:  ['Germany',      'Paraguay'],
-  4:  ['Netherlands',  'Morocco'],
-  5:  ['Ivory Coast',  'Norway'],
-  6:  ['France',       'Sweden'],
-  7:  ['Mexico',       'Ecuador'],
-  8:  ['England',      'DR Congo'],
-  9:  ['Belgium',      'Senegal'],
-  10: ['USA',          'Bosnia & Herzegovina'],
-  11: ['Spain',        'Austria'],
-  12: ['Portugal',     'Croatia'],
-  13: ['Switzerland',  'Algeria'],
-  14: ['Australia',    'Egypt'],
-  15: ['Argentina',    'Cape Verde'],
-  16: ['Colombia',     'Ghana'],
+const FDORG_KEY  = 'd10b957afefe4fd68e64b5944567a0d4';
+const FDORG_BASE = 'https://api.football-data.org/v4';
+// WC 2026 competition ID on football-data.org
+const WC_ID      = 2000;
+
+const MATCH_MAP = {
+  1:  {h:'RSA',a:'CAN',hName:'South Africa', aName:'Canada'},
+  2:  {h:'BRA',a:'JPN',hName:'Brazil',        aName:'Japan'},
+  3:  {h:'GER',a:'PAR',hName:'Germany',       aName:'Paraguay'},
+  4:  {h:'NED',a:'MAR',hName:'Netherlands',   aName:'Morocco'},
+  5:  {h:'CIV',a:'NOR',hName:'Ivory Coast',   aName:'Norway'},
+  6:  {h:'FRA',a:'SWE',hName:'France',        aName:'Sweden'},
+  7:  {h:'MEX',a:'ECU',hName:'Mexico',        aName:'Ecuador'},
+  8:  {h:'ENG',a:'COD',hName:'England',       aName:'DR Congo'},
+  9:  {h:'BEL',a:'SEN',hName:'Belgium',       aName:'Senegal'},
+  10: {h:'USA',a:'BIH',hName:'USA',           aName:'Bosnia & Herz.'},
+  11: {h:'ESP',a:'AUT',hName:'Spain',         aName:'Austria'},
+  12: {h:'POR',a:'CRO',hName:'Portugal',      aName:'Croatia'},
+  13: {h:'SUI',a:'DZA',hName:'Switzerland',   aName:'Algeria'},
+  14: {h:'AUS',a:'EGY',hName:'Australia',     aName:'Egypt'},
+  15: {h:'ARG',a:'CPV',hName:'Argentina',     aName:'Cape Verde'},
+  16: {h:'COL',a:'GHA',hName:'Colombia',      aName:'Ghana'},
 };
 
-// Maps team name to our abbreviation for points calc
-const TEAM_ABBR = {
-  'South Africa':'RSA','Canada':'CAN','Brazil':'BRA','Japan':'JPN',
-  'Germany':'GER','Paraguay':'PAR','Netherlands':'NED','Morocco':'MAR',
-  'Ivory Coast':'CIV','Norway':'NOR','France':'FRA','Sweden':'SWE',
-  'Mexico':'MEX','Ecuador':'ECU','England':'ENG','DR Congo':'COD',
-  'Congo DR':'COD','Belgium':'BEL','Senegal':'SEN','USA':'USA',
-  'Bosnia & Herzegovina':'BIH','Bosnia-Herzegovina':'BIH',
-  'Spain':'ESP','Austria':'AUT','Portugal':'POR','Croatia':'CRO',
-  'Switzerland':'SUI','Algeria':'DZA','Australia':'AUS','Egypt':'EGY',
-  'Argentina':'ARG','Cape Verde':'CPV','Colombia':'COL','Ghana':'GHA',
+// Also map full country names football-data.org might use
+const FD_NAME_MAP = {
+  'congo dr':'cod', 'dr congo':'cod', 'democratic republic of congo':'cod',
+  'bosnia and herzegovina':'bih', 'bosnia & herzegovina':'bih',
+  'ivory coast':'civ', "côte d'ivoire":'civ', 'cote d ivoire':'civ',
+  'cape verde':'cpv', 'cape verde islands':'cpv',
+  'south africa':'rsa', 'usa':'usa', 'united states':'usa',
 };
 
-// Normalize team names for flexible matching
-function normName(n) {
-  return (n||'').toLowerCase().replace(/[^a-z]/g,'');
+function normStr(s) { return (s||'').toLowerCase().replace(/[^a-z]/g,''); }
+
+function getAbbr(name) {
+  const n = normStr(name);
+  if (FD_NAME_MAP[n]) return FD_NAME_MAP[n].toUpperCase();
+  // Try to match against MATCH_MAP home/away names
+  for (const mm of Object.values(MATCH_MAP)) {
+    if (normStr(mm.hName) === n) return mm.h;
+    if (normStr(mm.aName) === n) return mm.a;
+  }
+  return name.slice(0,3).toUpperCase();
+}
+
+function parseFDStatus(status) {
+  // football-data.org statuses: SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, AWARDED
+  if (!status) return 'scheduled';
+  const s = status.toUpperCase();
+  if (s === 'FINISHED' || s === 'AWARDED') return 'final';
+  if (s === 'IN_PLAY' || s === 'PAUSED') return 'in_progress';
+  return 'scheduled';
+}
+
+function statusFromKickoff(ko) {
+  const now = Date.now();
+  if (now < ko) return 'scheduled';
+  if (now < ko + 115 * 60 * 1000) return 'in_progress';
+  return 'in_progress'; // still show as live until we get final score
 }
 
 async function fetchScores() {
+  // ── PRIMARY: football-data.org ──────────────────────
   try {
-    const url = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
-    const r = await fetch(url + '?t=' + Date.now()); // cache bust
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    const res = await fetch(`${FDORG_BASE}/competitions/${WC_ID}/matches?stage=LAST_32`, {
+      headers: { 'X-Auth-Token': FDORG_KEY },
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error('football-data.org HTTP ' + res.status);
+    const data = await res.json();
     const matches = data.matches || [];
 
-    // Build lookup by normalized team pair
+    if (matches.length === 0) throw new Error('No matches returned from football-data.org');
+
+    // Build lookup by normalized team name pair
     const lookup = {};
     matches.forEach(m => {
-      const key1 = normName(m.team1) + '_' + normName(m.team2);
-      const key2 = normName(m.team2) + '_' + normName(m.team1);
-      lookup[key1] = m;
-      lookup[key2] = { ...m, team1: m.team2, team2: m.team1,
-        score: m.score ? { ft: [m.score.ft[1], m.score.ft[0]] } : undefined };
+      if (!m.homeTeam || !m.awayTeam) return;
+      const hN = normStr(m.homeTeam.name || m.homeTeam.shortName || '');
+      const aN = normStr(m.awayTeam.name || m.awayTeam.shortName || '');
+      if (hN && aN) lookup[hN + '_' + aN] = m;
     });
 
-    // Map to our match IDs
-    Object.entries(MATCH_TEAMS).forEach(([id, [home, away]]) => {
+    let matched = 0;
+    Object.entries(MATCH_MAP).forEach(([id, mm]) => {
       const mid = parseInt(id);
-      const key = normName(home) + '_' + normName(away);
-      const match = lookup[key];
+      const key = normStr(mm.hName) + '_' + normStr(mm.aName);
+      const m = lookup[key];
 
-      if (!match) {
-        // Not in data yet (knockout match not populated) — scheduled
-        liveScores[mid] = { id: mid, homeScore: null, awayScore: null, status: 'scheduled', winner: null };
+      if (!m) {
+        // Try time-based status as fallback
+        const ourM = MATCHES.find(x => x.id === mid);
+        if (ourM && !liveScores[mid]) {
+          liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:statusFromKickoff(ourM.ko), winner:null};
+        }
         return;
       }
 
-      if (!match.score || !match.score.ft) {
-        // No score yet — determine if truly in progress or just scheduled
-        // Only mark in_progress if the kickoff time has passed (use our ko timestamps)
-        const ourMatch = MATCHES.find(mx => mx.id === mid);
-        const now = Date.now();
-        const kicked = ourMatch && now >= ourMatch.ko;
-        const status = kicked ? 'in_progress' : 'scheduled';
-        liveScores[mid] = { id: mid, homeScore: null, awayScore: null, status, winner: null };
-        return;
-      }
+      matched++;
+      const status = parseFDStatus(m.status);
 
-      // Has a score — finished
-      const hs = match.score.ft[0];
-      const as = match.score.ft[1];
+      // football-data.org gives regularTime (90min) score separately from fullTime
+      // regularTime = score after 90 minutes (what we need for score predictions)
+      // fullTime = score after ET if applicable (NOT what we want for score predictions)
+      const hs = m.score?.regularTime?.home ?? m.score?.fullTime?.home ?? null;
+      const as = m.score?.regularTime?.away ?? m.score?.fullTime?.away ?? null;
+
+      // Determine REAL ending method from football-data.org's duration field
+      // duration: REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
+      let ending = null;
+      const duration = (m.score?.duration || '').toUpperCase();
+      if (duration === 'REGULAR') ending = '90';
+      else if (duration === 'EXTRA_TIME') ending = 'ET';
+      else if (duration === 'PENALTY_SHOOTOUT') ending = 'PEN';
+
       let winner = null;
-      if (hs > as) winner = TEAM_ABBR[home] || null;
-      else if (as > hs) winner = TEAM_ABBR[away] || null;
-      // If draw at 90min in knockout — winner is whoever qualified (cannot determine from score alone)
-      // For now mark as draw (penalties/ET), points calc handles ET/PEN correctly
+      if (status === 'final') {
+        // Winner comes from the actual fullTime score + penalties if applicable
+        const fh = m.score?.fullTime?.home, fa = m.score?.fullTime?.away;
+        if (fh != null && fa != null) {
+          if (fh > fa) winner = mm.h;
+          else if (fa > fh) winner = mm.a;
+        }
+        if (winner === null && m.score?.penalties) {
+          const ph = m.score.penalties.home, pa = m.score.penalties.away;
+          if (ph != null && pa != null) {
+            if (ph > pa) winner = mm.h;
+            else if (pa > ph) winner = mm.a;
+          }
+        }
+      }
 
-      liveScores[mid] = { id: mid, homeScore: hs, awayScore: as, status: 'final', winner };
+      liveScores[mid] = {id:mid, homeScore:hs, awayScore:as, status, winner, ending};
     });
 
-    setSync('ok', '✓ Scores updated');
-  } catch(e) {
-    console.log('Score fetch error:', e.message);
-    setSync('ok', '✓ Connected — real-time sync active');
+    if (matched > 0) {
+      setSync('ok', '✓ Live scores updated');
+      return;
+    }
+    throw new Error('No R32 matches matched — may need different stage filter');
+
+  } catch(e1) {
+    console.log('football-data.org failed:', e1.message);
+
+    // ── FALLBACK: openfootball GitHub JSON ──────────────
+    try {
+      const url = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json?t=' + Date.now();
+      const res2 = await fetch(url, {cache:'no-store'});
+      if (!res2.ok) throw new Error('openfootball HTTP ' + res2.status);
+      const data2 = await res2.json();
+      const matches2 = data2.matches || [];
+
+      const lookup2 = {};
+      matches2.forEach(m => {
+        if (m.team1 && m.team2)
+          lookup2[normStr(m.team1)+'_'+normStr(m.team2)] = m;
+      });
+
+      Object.entries(MATCH_MAP).forEach(([id, mm]) => {
+        const mid = parseInt(id);
+        if (liveScores[mid]?.status === 'final') return; // keep confirmed results
+        const ourM = MATCHES.find(x => x.id === mid);
+        const m = lookup2[normStr(mm.hName)+'_'+normStr(mm.aName)];
+
+        if (!m) {
+          if (ourM) liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:statusFromKickoff(ourM.ko), winner:null};
+          return;
+        }
+        if (m.score?.ft) {
+          const hs=m.score.ft[0], as=m.score.ft[1];
+          // openfootball doesn't reliably give ending method — leave ending unknown
+          // so no false ending-method points are awarded
+          liveScores[mid] = {id:mid, homeScore:hs, awayScore:as, status:'final', winner: hs>as?mm.h:as>hs?mm.a:null, ending:null};
+        } else {
+          liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:ourM?statusFromKickoff(ourM.ko):'scheduled', winner:null};
+        }
+      });
+
+      setSync('ok', '✓ Scores updated');
+    } catch(e2) {
+      console.log('openfootball also failed:', e2.message);
+      applyHardcodedResults();
+      setSync('ok', '✓ Connected (cached scores)');
+    }
   }
+}
+
+function applyHardcodedResults() {
+  [
+    {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'},
+    {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'},
+    {id:4, homeScore:1, awayScore:1, status:'final', winner:'MAR', ending:'PEN'}, // NED 1-1 MAR, Morocco won on penalties
+  ].forEach(m => { liveScores[m.id] = m; });
 }
 
 // ─── HELPERS ────────────────────────────────────────
@@ -575,7 +673,6 @@ function calcEarnedPts(pred, live, m) {
 
   const hs = live.homeScore;
   const as = live.awayScore;
-  const isDraw90 = hs === as; // draw at 90min means ET or PEN happened
 
   // Qualifier: 2pts
   if (live.winner && pred.q) {
@@ -584,18 +681,16 @@ function calcEarnedPts(pred, live, m) {
   }
 
   // Correct score (90min): 3pts
-  // Score prediction is always vs the 90min score
   if (hs!=null && as!=null && pred.hs!=='' && pred.as!=='') {
     if (parseInt(pred.hs)===hs && parseInt(pred.as)===as)
       { sOk=true; pts+=3; }
   }
 
-  // Ending method: 1pt
-  // If 90min score is a draw → must have been ET or PEN → pred.e must be ET or PEN
-  // If 90min score is NOT a draw → ended at 90min → pred.e must be 90
-  if (pred.e) {
-    if (isDraw90 && (pred.e==='ET' || pred.e==='PEN')) { eOk=true; pts+=1; }
-    else if (!isDraw90 && pred.e==='90')               { eOk=true; pts+=1; }
+  // Ending method: 1pt — must match EXACTLY (90 / ET / PEN)
+  // live.ending holds the REAL ending method when known: '90' | 'ET' | 'PEN'
+  // If we don't know the real ending yet, no point can be awarded (avoid false credit)
+  if (pred.e && live.ending) {
+    if (pred.e === live.ending) { eOk=true; pts+=1; }
   }
 
   return {pts, qOk, sOk, eOk};
@@ -743,11 +838,13 @@ function renderAll() {
       : `<span class="lkbadge open">${u||'Open'}</span>`;
 
     const hasLiveScore = lv && lv.homeScore != null && lv.awayScore != null;
-    const livebar = isLv && hasLiveScore
-      ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
-      : isLv && !hasLiveScore
-      ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} vs ${m.away}</b></div>`
-      : isFn && hasLiveScore ? `<div class="livebar final">✔ Final: <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>` : '';
+    const livebar = isLv
+      ? hasLiveScore
+        ? `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${lv.homeScore}–${lv.awayScore} ${m.away}</b></div>`
+        : `<div class="livebar live"><span><span class="livedot"></span>LIVE NOW</span> <b>${m.home} vs ${m.away}</b> <span style="font-size:11px;font-weight:500;opacity:.7">— score updates every 60s</span></div>`
+      : isFn
+        ? `<div class="livebar final">✔ Final${lv.ending==='PEN'?' (Pens)':lv.ending==='ET'?' (ET)':''}: <b>${m.home} ${hasLiveScore ? lv.homeScore+'–'+lv.awayScore : '–'} ${m.away}</b></div>`
+        : '';
 
     // Save button — only shown if locked=false AND user is in edit mode
     const saveBtn = (!lk && editMode) ? `
@@ -961,7 +1058,8 @@ function renderAllPicks() {
 
     let scorePill = '';
     if (isFinal && hasScore) {
-      scorePill = `<span class="ap-match-score">✔ ${lv.homeScore}–${lv.awayScore}</span>`;
+      const endTag = lv.ending === 'PEN' ? ' (Pen)' : lv.ending === 'ET' ? ' (ET)' : '';
+      scorePill = `<span class="ap-match-score">✔ ${lv.homeScore}–${lv.awayScore}${endTag}</span>`;
     } else if (isLive && hasScore) {
       scorePill = `<span class="ap-match-score live">● LIVE ${lv.homeScore}–${lv.awayScore}</span>`;
     } else {
@@ -1301,6 +1399,54 @@ function showToast(msg) {
   t._t = setTimeout(() => t.style.opacity = '0', 4000);
 }
 
+// ─── LIVE BAR UPDATER ───────────────────────────────
+// Updates score banners on existing cards without destroying input field values
+function updateLiveBars() {
+  MATCHES.forEach(m => {
+    const card = document.getElementById('card-' + m.id);
+    if (!card) return;
+    const lv = liveScores[m.id];
+    if (!lv || lv.status === 'scheduled') return;
+
+    const isLv = lv.status === 'in_progress';
+    const isFn = lv.status === 'final';
+    const hs = lv.homeScore;
+    const as = lv.awayScore;
+    const hasScore = hs != null && as != null;
+    const scoreStr = hasScore ? hs + '–' + as : '–';
+
+    // Remove existing live bar if any
+    const existing = card.querySelector('.livebar');
+    if (existing) existing.remove();
+
+    // Build new live bar
+    let barHtml = '';
+    if (isLv) {
+      barHtml = `<div class="livebar live"><span><span class="livedot"></span>LIVE</span> <b>${m.home} ${scoreStr} ${m.away}</b></div>`;
+    } else if (isFn) {
+      const endTag = lv.ending === 'PEN' ? ' (Pens)' : lv.ending === 'ET' ? ' (ET)' : '';
+      barHtml = `<div class="livebar final">✔ Final${endTag}: <b>${m.home} ${scoreStr} ${m.away}</b></div>`;
+    }
+
+    if (barHtml) {
+      // Insert after ctop div
+      const ctop = card.querySelector('.ctop');
+      if (ctop) {
+        ctop.insertAdjacentHTML('afterend', barHtml);
+      }
+    }
+
+    // Update lock badge if match is now final
+    if (isFn) {
+      const badge = card.querySelector('.lkbadge');
+      if (badge) {
+        badge.className = 'lkbadge locked';
+        badge.textContent = '🔒 Locked';
+      }
+    }
+  });
+}
+
 // ─── REFRESH ────────────────────────────────────────
 async function refreshApp() {
   const btn = document.getElementById('refresh-btn');
@@ -1334,7 +1480,18 @@ if (savedName) {
   }
 }
 
-fetchScores().then(renderAll);
+// Apply known results immediately so leaderboard shows while API loads
+applyHardcodedResults();
+renderAll();
+
+// Then fetch live scores from API
+fetchScores().then(() => {
+  updateLiveBars();   // fast: just update score banners on existing cards
+  renderAll();        // full re-render with fresh scores
+  if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
+  if (document.getElementById('page-allpicks').classList.contains('active')) renderAllPicks();
+});
+
 initNotifications();
 
 // Show "Add to Home Screen" banner if opened in browser
@@ -1344,13 +1501,26 @@ if (!isStandalone) {
   document.getElementById('install-banner').style.display = 'block';
 }
 
-// Refresh scores every 3 minutes automatically
-setInterval(async()=>{
+// Smart refresh: every 60s during live matches, every 3min otherwise
+async function smartRefresh() {
   await fetchScores();
+  updateLiveBars(); // instant update without full re-render
   renderAll();
-  if(document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
-  if(document.getElementById('page-allpicks').classList.contains('active')) renderAllPicks();
-}, 3 * 60 * 1000);
+  if (document.getElementById('page-leaderboard').classList.contains('active')) renderLB();
+  if (document.getElementById('page-allpicks').classList.contains('active')) renderAllPicks();
+}
+
+function scheduleNextRefresh() {
+  // Check if any match is currently live
+  const hasLive = Object.values(liveScores).some(s => s && s.status === 'in_progress');
+  const delay = hasLive ? 60 * 1000 : 3 * 60 * 1000; // 60s live, 3min otherwise
+  setTimeout(async () => {
+    await smartRefresh();
+    scheduleNextRefresh(); // reschedule after each refresh
+  }, delay);
+}
+
+scheduleNextRefresh();
 </script>
 </body>
 </html>
