@@ -521,6 +521,7 @@ async function fetchScores() {
     if (!res.ok) throw new Error('football-data.org HTTP ' + res.status);
     const data = await res.json();
     const matches = data.matches || [];
+    console.log('[football-data.org] matches returned:', matches.length);
 
     if (matches.length === 0) throw new Error('No matches returned from football-data.org');
 
@@ -639,8 +640,9 @@ async function fetchScores() {
 
 function applyHardcodedResults() {
   [
-    {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'},
-    {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'},
+    {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'}, // RSA 0-1 CAN
+    {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'}, // BRA 2-1 JPN
+    {id:3, homeScore:1, awayScore:1, status:'final', winner:'PAR', ending:'PEN'}, // GER 1-1 PAR, Paraguay won 4-3 on penalties
     {id:4, homeScore:1, awayScore:1, status:'final', winner:'MAR', ending:'PEN'}, // NED 1-1 MAR, Morocco won on penalties
   ].forEach(m => { liveScores[m.id] = m; });
 }
