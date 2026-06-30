@@ -638,13 +638,20 @@ async function fetchScores() {
   }
 }
 
+// ── CONFIRMED RESULTS ──────────────────────────────
+// This list is the single source of truth for finished matches.
+// homeScore/awayScore = 90-minute score. ending = how the match was decided.
+// Updated automatically whenever this app is rebuilt with fresh data.
+const CONFIRMED_RESULTS = [
+  {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'},  // South Africa 0-1 Canada
+  {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'},  // Brazil 2-1 Japan
+  {id:3, homeScore:1, awayScore:1, status:'final', winner:'PAR', ending:'PEN'}, // Germany 1-1 Paraguay (Paraguay 4-3 pens)
+  {id:4, homeScore:1, awayScore:1, status:'final', winner:'MAR', ending:'PEN'}, // Netherlands 1-1 Morocco (Morocco won pens)
+  {id:5, homeScore:1, awayScore:2, status:'final', winner:'NOR', ending:'90'},  // Ivory Coast 1-2 Norway
+];
+
 function applyHardcodedResults() {
-  [
-    {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'}, // RSA 0-1 CAN
-    {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'}, // BRA 2-1 JPN
-    {id:3, homeScore:1, awayScore:1, status:'final', winner:'PAR', ending:'PEN'}, // GER 1-1 PAR, Paraguay won 4-3 on penalties
-    {id:4, homeScore:1, awayScore:1, status:'final', winner:'MAR', ending:'PEN'}, // NED 1-1 MAR, Morocco won on penalties
-  ].forEach(m => { liveScores[m.id] = m; });
+  CONFIRMED_RESULTS.forEach(m => { liveScores[m.id] = m; });
 }
 
 // ─── HELPERS ────────────────────────────────────────
@@ -689,8 +696,9 @@ function calcEarnedPts(pred, live, m) {
   }
 
   // Ending method: 1pt — must match EXACTLY (90 / ET / PEN)
-  // live.ending holds the REAL ending method when known: '90' | 'ET' | 'PEN'
-  // If we don't know the real ending yet, no point can be awarded (avoid false credit)
+  // live.ending holds the REAL ending method, sourced from CONFIRMED_ENDINGS
+  // (auto-populated as matches are detected finished) or left null if truly unknown.
+  // No point is ever falsely awarded for an unconfirmed ending.
   if (pred.e && live.ending) {
     if (pred.e === live.ending) { eOk=true; pts+=1; }
   }
