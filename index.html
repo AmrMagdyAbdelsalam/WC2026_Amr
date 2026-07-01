@@ -643,11 +643,13 @@ async function fetchScores() {
 // homeScore/awayScore = 90-minute score. ending = how the match was decided.
 // Updated automatically whenever this app is rebuilt with fresh data.
 const CONFIRMED_RESULTS = [
-  {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'},  // South Africa 0-1 Canada
-  {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'},  // Brazil 2-1 Japan
-  {id:3, homeScore:1, awayScore:1, status:'final', winner:'PAR', ending:'PEN'}, // Germany 1-1 Paraguay (Paraguay 4-3 pens)
+  {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'},  // South Africa 0-1 Canada (90 mins)
+  {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'},  // Brazil 2-1 Japan (90 mins)
+  {id:3, homeScore:1, awayScore:1, status:'final', winner:'PAR', ending:'PEN'}, // Germany 1-1 Paraguay (Paraguay won 4-3 pens)
   {id:4, homeScore:1, awayScore:1, status:'final', winner:'MAR', ending:'PEN'}, // Netherlands 1-1 Morocco (Morocco won pens)
-  {id:5, homeScore:1, awayScore:2, status:'final', winner:'NOR', ending:'90'},  // Ivory Coast 1-2 Norway
+  {id:5, homeScore:1, awayScore:2, status:'final', winner:'NOR', ending:'90'},  // Ivory Coast 1-2 Norway (90 mins)
+  {id:6, homeScore:3, awayScore:0, status:'final', winner:'FRA', ending:'90'},  // France 3-0 Sweden (90 mins)
+  {id:7, homeScore:2, awayScore:0, status:'final', winner:'MEX', ending:'90'},  // Mexico 2-0 Ecuador (90 mins)
 ];
 
 function applyHardcodedResults() {
