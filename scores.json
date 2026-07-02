@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-02T06:00:00.000Z",
+  "updatedAt": "2026-07-02T08:00:00.000Z",
   "matches": {
     "1": {
       "id": 1,
@@ -75,11 +75,11 @@
     },
     "9": {
       "id": 9,
-      "homeScore": 3,
+      "homeScore": 2,
       "awayScore": 2,
       "status": "final",
       "winner": "BEL",
-      "ending": "90",
+      "ending": "ET",
       "source": "confirmed"
     },
     "10": {
