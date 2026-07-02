@@ -1,0 +1,143 @@
+{
+  "updatedAt": "2026-07-02T06:00:00.000Z",
+  "matches": {
+    "1": {
+      "id": 1,
+      "homeScore": 0,
+      "awayScore": 1,
+      "status": "final",
+      "winner": "CAN",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "2": {
+      "id": 2,
+      "homeScore": 2,
+      "awayScore": 1,
+      "status": "final",
+      "winner": "BRA",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "3": {
+      "id": 3,
+      "homeScore": 1,
+      "awayScore": 1,
+      "status": "final",
+      "winner": "PAR",
+      "ending": "PEN",
+      "source": "confirmed"
+    },
+    "4": {
+      "id": 4,
+      "homeScore": 1,
+      "awayScore": 1,
+      "status": "final",
+      "winner": "MAR",
+      "ending": "PEN",
+      "source": "confirmed"
+    },
+    "5": {
+      "id": 5,
+      "homeScore": 1,
+      "awayScore": 2,
+      "status": "final",
+      "winner": "NOR",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "6": {
+      "id": 6,
+      "homeScore": 3,
+      "awayScore": 0,
+      "status": "final",
+      "winner": "FRA",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "7": {
+      "id": 7,
+      "homeScore": 2,
+      "awayScore": 0,
+      "status": "final",
+      "winner": "MEX",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "8": {
+      "id": 8,
+      "homeScore": 2,
+      "awayScore": 1,
+      "status": "final",
+      "winner": "ENG",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "9": {
+      "id": 9,
+      "homeScore": 3,
+      "awayScore": 2,
+      "status": "final",
+      "winner": "BEL",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "10": {
+      "id": 10,
+      "homeScore": 2,
+      "awayScore": 0,
+      "status": "final",
+      "winner": "USA",
+      "ending": "90",
+      "source": "confirmed"
+    },
+    "11": {
+      "id": 11,
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "winner": null,
+      "ending": null
+    },
+    "12": {
+      "id": 12,
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "winner": null,
+      "ending": null
+    },
+    "13": {
+      "id": 13,
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "winner": null,
+      "ending": null
+    },
+    "14": {
+      "id": 14,
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "winner": null,
+      "ending": null
+    },
+    "15": {
+      "id": 15,
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "winner": null,
+      "ending": null
+    },
+    "16": {
+      "id": 16,
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "winner": null,
+      "ending": null
+    }
+  }
+}

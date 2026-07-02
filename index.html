@@ -445,215 +445,100 @@ function applyFirebasePreds(savedPreds) {
 }
 
 // ─── LIVE SCORES ────────────────────────────────────
-// Primary:  football-data.org (free API key, CORS-open, live scores)
-// Fallback: openfootball GitHub JSON (updates ~1hr after match)
-// Last resort: hardcoded confirmed results
+// Reads scores.json — updated every 5 min by GitHub Actions
+// scores.json is served from the same GitHub Pages domain (no CORS)
+// Includes: homeScore, awayScore, status, ending (90/ET/PEN), winner
 
-const FDORG_KEY  = 'd10b957afefe4fd68e64b5944567a0d4';
-const FDORG_BASE = 'https://api.football-data.org/v4';
-// WC 2026 competition ID on football-data.org
-const WC_ID      = 2000;
+const SCORES_URL = 'scores.json';
 
-const MATCH_MAP = {
-  1:  {h:'RSA',a:'CAN',hName:'South Africa', aName:'Canada'},
-  2:  {h:'BRA',a:'JPN',hName:'Brazil',        aName:'Japan'},
-  3:  {h:'GER',a:'PAR',hName:'Germany',       aName:'Paraguay'},
-  4:  {h:'NED',a:'MAR',hName:'Netherlands',   aName:'Morocco'},
-  5:  {h:'CIV',a:'NOR',hName:'Ivory Coast',   aName:'Norway'},
-  6:  {h:'FRA',a:'SWE',hName:'France',        aName:'Sweden'},
-  7:  {h:'MEX',a:'ECU',hName:'Mexico',        aName:'Ecuador'},
-  8:  {h:'ENG',a:'COD',hName:'England',       aName:'DR Congo'},
-  9:  {h:'BEL',a:'SEN',hName:'Belgium',       aName:'Senegal'},
-  10: {h:'USA',a:'BIH',hName:'USA',           aName:'Bosnia & Herz.'},
-  11: {h:'ESP',a:'AUT',hName:'Spain',         aName:'Austria'},
-  12: {h:'POR',a:'CRO',hName:'Portugal',      aName:'Croatia'},
-  13: {h:'SUI',a:'DZA',hName:'Switzerland',   aName:'Algeria'},
-  14: {h:'AUS',a:'EGY',hName:'Australia',     aName:'Egypt'},
-  15: {h:'ARG',a:'CPV',hName:'Argentina',     aName:'Cape Verde'},
-  16: {h:'COL',a:'GHA',hName:'Colombia',      aName:'Ghana'},
-};
+// Fallback confirmed results used before scores.json is available
+const CONFIRMED_RESULTS = [
+  {id:1,  homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'},  // RSA 0-1 CAN (90m)
+  {id:2,  homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'},  // BRA 2-1 JPN (90m)
+  {id:3,  homeScore:1, awayScore:1, status:'final', winner:'PAR', ending:'PEN'}, // GER 1-1 PAR (Paraguay 4-3 pens)
+  {id:4,  homeScore:1, awayScore:1, status:'final', winner:'MAR', ending:'PEN'}, // NED 1-1 MAR (Morocco won pens)
+  {id:5,  homeScore:1, awayScore:2, status:'final', winner:'NOR', ending:'90'},  // CIV 1-2 NOR (90m)
+  {id:6,  homeScore:3, awayScore:0, status:'final', winner:'FRA', ending:'90'},  // FRA 3-0 SWE (90m)
+  {id:7,  homeScore:2, awayScore:0, status:'final', winner:'MEX', ending:'90'},  // MEX 2-0 ECU (90m)
+  {id:8,  homeScore:2, awayScore:1, status:'final', winner:'ENG', ending:'90'},  // ENG 2-1 COD (90m)
+  {id:9,  homeScore:3, awayScore:2, status:'final', winner:'BEL', ending:'90'},  // BEL 3-2 SEN (90m)
+  {id:10, homeScore:2, awayScore:0, status:'final', winner:'USA', ending:'90'},  // USA 2-0 BIH (90m)
+];
 
-// Also map full country names football-data.org might use
-const FD_NAME_MAP = {
-  'congo dr':'cod', 'dr congo':'cod', 'democratic republic of congo':'cod',
-  'bosnia and herzegovina':'bih', 'bosnia & herzegovina':'bih',
-  'ivory coast':'civ', "côte d'ivoire":'civ', 'cote d ivoire':'civ',
-  'cape verde':'cpv', 'cape verde islands':'cpv',
-  'south africa':'rsa', 'usa':'usa', 'united states':'usa',
-};
-
-function normStr(s) { return (s||'').toLowerCase().replace(/[^a-z]/g,''); }
-
-function getAbbr(name) {
-  const n = normStr(name);
-  if (FD_NAME_MAP[n]) return FD_NAME_MAP[n].toUpperCase();
-  // Try to match against MATCH_MAP home/away names
-  for (const mm of Object.values(MATCH_MAP)) {
-    if (normStr(mm.hName) === n) return mm.h;
-    if (normStr(mm.aName) === n) return mm.a;
-  }
-  return name.slice(0,3).toUpperCase();
-}
-
-function parseFDStatus(status) {
-  // football-data.org statuses: SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, AWARDED
-  if (!status) return 'scheduled';
-  const s = status.toUpperCase();
-  if (s === 'FINISHED' || s === 'AWARDED') return 'final';
-  if (s === 'IN_PLAY' || s === 'PAUSED') return 'in_progress';
-  return 'scheduled';
+function applyHardcodedResults() {
+  CONFIRMED_RESULTS.forEach(m => { liveScores[m.id] = m; });
 }
 
 function statusFromKickoff(ko) {
   const now = Date.now();
   if (now < ko) return 'scheduled';
   if (now < ko + 115 * 60 * 1000) return 'in_progress';
-  return 'in_progress'; // still show as live until we get final score
+  return 'in_progress';
 }
 
 async function fetchScores() {
-  // ── PRIMARY: football-data.org ──────────────────────
+  // Start with hardcoded confirmed results
+  applyHardcodedResults();
+
   try {
-    const res = await fetch(`${FDORG_BASE}/competitions/${WC_ID}/matches?stage=LAST_32`, {
-      headers: { 'X-Auth-Token': FDORG_KEY },
-      cache: 'no-store'
-    });
-    if (!res.ok) throw new Error('football-data.org HTTP ' + res.status);
+    // scores.json is on same domain — no CORS issue
+    const res = await fetch(SCORES_URL + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('scores.json HTTP ' + res.status);
     const data = await res.json();
-    const matches = data.matches || [];
-    console.log('[football-data.org] matches returned:', matches.length);
 
-    if (matches.length === 0) throw new Error('No matches returned from football-data.org');
+    if (!data.matches) throw new Error('No matches in scores.json');
 
-    // Build lookup by normalized team name pair
-    const lookup = {};
-    matches.forEach(m => {
-      if (!m.homeTeam || !m.awayTeam) return;
-      const hN = normStr(m.homeTeam.name || m.homeTeam.shortName || '');
-      const aN = normStr(m.awayTeam.name || m.awayTeam.shortName || '');
-      if (hN && aN) lookup[hN + '_' + aN] = m;
-    });
-
-    let matched = 0;
-    Object.entries(MATCH_MAP).forEach(([id, mm]) => {
+    let updated = 0;
+    Object.entries(data.matches).forEach(([id, m]) => {
       const mid = parseInt(id);
-      const key = normStr(mm.hName) + '_' + normStr(mm.aName);
-      const m = lookup[key];
-
-      if (!m) {
-        // Try time-based status as fallback
-        const ourM = MATCHES.find(x => x.id === mid);
-        if (ourM && !liveScores[mid]) {
-          liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:statusFromKickoff(ourM.ko), winner:null};
-        }
-        return;
-      }
-
-      matched++;
-      const status = parseFDStatus(m.status);
-
-      // football-data.org gives regularTime (90min) score separately from fullTime
-      // regularTime = score after 90 minutes (what we need for score predictions)
-      // fullTime = score after ET if applicable (NOT what we want for score predictions)
-      const hs = m.score?.regularTime?.home ?? m.score?.fullTime?.home ?? null;
-      const as = m.score?.regularTime?.away ?? m.score?.fullTime?.away ?? null;
-
-      // Determine REAL ending method from football-data.org's duration field
-      // duration: REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT
-      let ending = null;
-      const duration = (m.score?.duration || '').toUpperCase();
-      if (duration === 'REGULAR') ending = '90';
-      else if (duration === 'EXTRA_TIME') ending = 'ET';
-      else if (duration === 'PENALTY_SHOOTOUT') ending = 'PEN';
-
-      let winner = null;
-      if (status === 'final') {
-        // Winner comes from the actual fullTime score + penalties if applicable
-        const fh = m.score?.fullTime?.home, fa = m.score?.fullTime?.away;
-        if (fh != null && fa != null) {
-          if (fh > fa) winner = mm.h;
-          else if (fa > fh) winner = mm.a;
-        }
-        if (winner === null && m.score?.penalties) {
-          const ph = m.score.penalties.home, pa = m.score.penalties.away;
-          if (ph != null && pa != null) {
-            if (ph > pa) winner = mm.h;
-            else if (pa > ph) winner = mm.a;
-          }
-        }
-      }
-
-      liveScores[mid] = {id:mid, homeScore:hs, awayScore:as, status, winner, ending};
+      liveScores[mid] = {
+        id:        mid,
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
+        status:    m.status    || 'scheduled',
+        ending:    m.ending    || null,
+        winner:    m.winner    || null,
+      };
+      updated++;
     });
 
-    if (matched > 0) {
-      setSync('ok', '✓ Live scores updated');
-      return;
-    }
-    throw new Error('No R32 matches matched — may need different stage filter');
+    // scores.json may not have ending for some matches yet — 
+    // ensure CONFIRMED_RESULTS still override for known finished matches
+    CONFIRMED_RESULTS.forEach(m => {
+      const existing = liveScores[m.id];
+      // Only override if scores.json doesn't have ending info
+      if (existing && existing.status === 'final' && !existing.ending && m.ending) {
+        liveScores[m.id] = m;
+      }
+    });
 
-  } catch(e1) {
-    console.log('football-data.org failed:', e1.message);
+    // For any match not in scores.json, infer status from kickoff time
+    MATCHES.forEach(m => {
+      if (!liveScores[m.id]) {
+        liveScores[m.id] = {
+          id: m.id, homeScore: null, awayScore: null,
+          status: statusFromKickoff(m.ko), winner: null, ending: null
+        };
+      }
+    });
 
-    // ── FALLBACK: openfootball GitHub JSON ──────────────
-    try {
-      const url = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json?t=' + Date.now();
-      const res2 = await fetch(url, {cache:'no-store'});
-      if (!res2.ok) throw new Error('openfootball HTTP ' + res2.status);
-      const data2 = await res2.json();
-      const matches2 = data2.matches || [];
+    const lastUpdate = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '';
+    setSync('ok', '✓ Scores live' + (lastUpdate ? ' · updated ' + lastUpdate : ''));
+    console.log(`Loaded ${updated} matches from scores.json`);
 
-      const lookup2 = {};
-      matches2.forEach(m => {
-        if (m.team1 && m.team2)
-          lookup2[normStr(m.team1)+'_'+normStr(m.team2)] = m;
-      });
-
-      Object.entries(MATCH_MAP).forEach(([id, mm]) => {
-        const mid = parseInt(id);
-        if (liveScores[mid]?.status === 'final') return; // keep confirmed results
-        const ourM = MATCHES.find(x => x.id === mid);
-        const m = lookup2[normStr(mm.hName)+'_'+normStr(mm.aName)];
-
-        if (!m) {
-          if (ourM) liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:statusFromKickoff(ourM.ko), winner:null};
-          return;
-        }
-        if (m.score?.ft) {
-          const hs=m.score.ft[0], as=m.score.ft[1];
-          // openfootball doesn't reliably give ending method — leave ending unknown
-          // so no false ending-method points are awarded
-          liveScores[mid] = {id:mid, homeScore:hs, awayScore:as, status:'final', winner: hs>as?mm.h:as>hs?mm.a:null, ending:null};
-        } else {
-          liveScores[mid] = {id:mid, homeScore:null, awayScore:null, status:ourM?statusFromKickoff(ourM.ko):'scheduled', winner:null};
-        }
-      });
-
-      setSync('ok', '✓ Scores updated');
-    } catch(e2) {
-      console.log('openfootball also failed:', e2.message);
-      applyHardcodedResults();
-      setSync('ok', '✓ Connected (cached scores)');
-    }
+  } catch(e) {
+    console.log('scores.json failed:', e.message, '— using hardcoded results');
+    // Fall back to kickoff-time based status for unconfirmed matches
+    MATCHES.forEach(m => {
+      if (!liveScores[m.id]) {
+        liveScores[m.id] = {
+          id: m.id, homeScore: null, awayScore: null,
+          status: statusFromKickoff(m.ko), winner: null, ending: null
+        };
+      }
+    });
+    setSync('ok', '✓ Connected');
   }
-}
-
-// ── CONFIRMED RESULTS ──────────────────────────────
-// This list is the single source of truth for finished matches.
-// homeScore/awayScore = 90-minute score. ending = how the match was decided.
-// Updated automatically whenever this app is rebuilt with fresh data.
-const CONFIRMED_RESULTS = [
-  {id:1, homeScore:0, awayScore:1, status:'final', winner:'CAN', ending:'90'},  // South Africa 0-1 Canada (90 mins)
-  {id:2, homeScore:2, awayScore:1, status:'final', winner:'BRA', ending:'90'},  // Brazil 2-1 Japan (90 mins)
-  {id:3, homeScore:1, awayScore:1, status:'final', winner:'PAR', ending:'PEN'}, // Germany 1-1 Paraguay (Paraguay won 4-3 pens)
-  {id:4, homeScore:1, awayScore:1, status:'final', winner:'MAR', ending:'PEN'}, // Netherlands 1-1 Morocco (Morocco won pens)
-  {id:5, homeScore:1, awayScore:2, status:'final', winner:'NOR', ending:'90'},  // Ivory Coast 1-2 Norway (90 mins)
-  {id:6, homeScore:3, awayScore:0, status:'final', winner:'FRA', ending:'90'},  // France 3-0 Sweden (90 mins)
-  {id:7, homeScore:2, awayScore:0, status:'final', winner:'MEX', ending:'90'},  // Mexico 2-0 Ecuador (90 mins)
-];
-
-function applyHardcodedResults() {
-  CONFIRMED_RESULTS.forEach(m => { liveScores[m.id] = m; });
 }
 
 // ─── HELPERS ────────────────────────────────────────
